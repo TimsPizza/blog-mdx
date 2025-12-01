@@ -1,0 +1,10 @@
+{
+  "completed_task_counter": 1,
+  "last_snapshot_commit": null,
+  "last_impl_index": 0,
+  "last_impl_time": null,
+  "pending_tasks": [],
+  "done_tasks_since_last_impl": [
+    "Tailwind theme tokens for globals"
+  ]
+}
