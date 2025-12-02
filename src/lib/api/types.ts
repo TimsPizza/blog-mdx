@@ -1,0 +1,151 @@
+export type DocStatus = "draft" | "published" | "archived";
+
+export interface MdxDocument {
+  slug: string; // e.g. posts/hello-world.mdx
+  meta: Record<string, unknown>;
+  content: string; // MDX content
+  sha: string; // Git blob SHA (ETag anchor)
+}
+
+export interface MdxDocumentMeta {
+  slug: string;
+  title?: string;
+  summary?: string;
+  tags?: string[];
+  coverImageId?: string;
+  status: DocStatus;
+  sha: string; // Blob SHA for the MDX file
+  updatedAt?: string; // ISO timestamp cached from git history
+}
+
+export type MediaKind = "image" | "video" | "audio" | "binary";
+
+export interface MediaReference {
+  id: string;
+  kind: MediaKind;
+  url: string; // External URL (GitHub raw, S3, CDN, etc.)
+  thumbnailUrl?: string;
+  contentType?: string;
+  sizeBytes?: number;
+  availability?: "available" | "unknown" | "broken";
+  meta?: Record<string, unknown>;
+}
+
+export interface ApiError {
+  code:
+    | "not_found"
+    | "conflict"
+    | "unauthorized"
+    | "forbidden"
+    | "validation_failed"
+    | "server_error";
+  message: string;
+  details?: unknown;
+}
+
+export interface GetDocResponse {
+  doc: MdxDocument;
+  media?: MediaReference[]; // If you choose to hydrate references alongside the doc
+}
+
+export interface ListDocsRequest {
+  cursor?: string;
+  limit?: number;
+  tag?: string;
+  status?: DocStatus;
+}
+
+export interface ListDocsResponse {
+  items: MdxDocumentMeta[];
+  nextCursor?: string;
+}
+
+export interface UpsertDocRequest {
+  slug: string;
+  content: string; // MDX content
+  meta?: Record<string, unknown>; // Structured metadata to write to meta.json
+  sha?: string; // Required for updates to enforce optimistic locking
+  message: string; // Git commit message
+}
+
+export interface UpsertDocResponse {
+  slug: string;
+  newSha: string; // New blob SHA
+  commitSha: string; // Commit SHA that wrote the file
+}
+
+export interface DeleteDocRequest {
+  slug: string;
+  sha: string; // Blob SHA to avoid deleting stale content
+  message: string;
+}
+
+export interface DeleteDocResponse {
+  deleted: true;
+  commitSha: string;
+}
+
+export interface ArchiveDocRequest {
+  slug: string;
+  expectedSha?: string; // Optional sanity check against metadata entry
+  message: string;
+}
+
+export interface ArchiveDocResponse {
+  status: DocStatus;
+  commitSha: string;
+}
+
+// Admin auth via GitHub OAuth (TOTP removed)
+export interface StartOAuthResponse {
+  authUrl: string;
+  state: string;
+}
+
+export interface ExchangeOAuthCodeRequest {
+  code: string;
+  state: string;
+}
+
+export interface Session {
+  token: string; // bearer or cookie value
+  expiresAt?: string;
+  refreshToken?: string;
+}
+
+export interface ExchangeOAuthCodeResponse {
+  session: Session;
+}
+
+export interface RefreshSessionRequest {
+  refreshToken: string;
+}
+
+export interface RefreshSessionResponse {
+  session: Session;
+}
+
+export interface UnarchiveDocRequest {
+  slug: string;
+  expectedSha?: string;
+  message: string;
+}
+
+export interface UnarchiveDocResponse {
+  status: DocStatus;
+  commitSha: string;
+}
+
+export interface BlogApiClient {
+  listDocs(req: ListDocsRequest): Promise<ListDocsResponse>;
+  getDoc(slug: string): Promise<GetDocResponse>;
+  upsertDoc(req: UpsertDocRequest): Promise<UpsertDocResponse>;
+  deleteDoc(req: DeleteDocRequest): Promise<DeleteDocResponse>;
+  archiveDoc(req: ArchiveDocRequest): Promise<ArchiveDocResponse>;
+  unarchiveDoc(req: UnarchiveDocRequest): Promise<UnarchiveDocResponse>;
+  startOAuth?(): Promise<StartOAuthResponse>;
+  exchangeOAuthCode?(
+    req: ExchangeOAuthCodeRequest,
+  ): Promise<ExchangeOAuthCodeResponse>;
+  refreshSession?(req: RefreshSessionRequest): Promise<RefreshSessionResponse>;
+}

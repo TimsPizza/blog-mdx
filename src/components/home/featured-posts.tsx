@@ -1,0 +1,58 @@
+import { Section } from "@/components/craft";
+import { getAllPosts } from "@/lib/api";
+import { ArrowRight, Clock } from "lucide-react";
+import Link from "next/link";
+
+export async function FeaturedPosts() {
+  const posts = (await getAllPosts()).slice(0, 4);
+
+  return (
+    <Section className="bg-muted/50 py-12">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Featured</h2>
+          <Link
+            href="/posts"
+            className="text-primary inline-flex items-center hover:underline"
+          >
+            View All
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {posts.map((post, index) => (
+            <article
+              key={index}
+              className="bg-card overflow-hidden rounded-lg border shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="space-y-3 p-5">
+                <h3 className="line-clamp-2 text-lg font-semibold">
+                  {post.title.rendered}
+                </h3>
+                <p className="text-muted-foreground line-clamp-2">
+                  {post.excerpt?.rendered.replace(/<[^>]*>/g, "") ||
+                    "No Excerpt"}
+                </p>
+                <div className="text-muted-foreground flex items-center text-sm">
+                  <span className="inline-flex items-center">
+                    <Clock className="mr-1 h-4 w-4" />
+                    {post.date}
+                  </span>
+                  <span className="mx-2">•</span>
+                </div>
+                <Link
+                  href={`/posts/${post.slug}`}
+                  className="text-primary inline-flex items-center pt-2 hover:underline"
+                >
+                  Read More
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
