@@ -9,14 +9,15 @@ import {
 
 import { Container, Section } from "@/components/craft";
 import { MobileNav } from "@/components/nav/mobile-nav";
+import { footerMenu, mainMenu, siteConfig } from "@/components/nav/nav.config";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { footerMenu, mainMenu, siteConfig } from "@/components/nav/nav.config";
 
 import Link from "next/link";
 
 import NavItem from "@/components/ui/nav-item";
 import { cn } from "@/lib/utils";
+import { NavProps } from "@/types/layout";
 
 const lxgw = LXGW_WenKai_TC({
   subsets: ["latin"],

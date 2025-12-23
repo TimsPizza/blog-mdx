@@ -3,16 +3,13 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
+import { extractHeadingsFromMdx } from "@/components/mdx/heading-utils";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface Heading {
   id: string;
   text: string;
-  level: string;
-}
-
-function generateId(text: string): string {
-  return text.toLowerCase().replace(/[^\w]+/g, "-");
+  level: number;
 }
 
 function extractNumber(text: string): number {
@@ -37,28 +34,7 @@ export function TableOfContents({
 
   // 提取标题（纯计算，不触发额外渲染）
   const headings = useMemo<Heading[]>(() => {
-    const extracted =
-      content.match(/<h[23][^>]*>(.*?)<\/h[23]>/g)?.map((heading) => {
-        const level = heading.charAt(2);
-        const text = heading.replace(/<[^>]*>/g, "");
-        const id = generateId(text);
-        return { level, text, id };
-      }) || [];
-    return extracted;
-  }, [content]);
-
-  // add ids to headings in the DOM
-  useEffect(() => {
-    const article = document.querySelector("article");
-    if (article) {
-      article.innerHTML = article.innerHTML.replace(
-        /<h([23])[^>]*>(.*?)<\/h\1>/g,
-        (_match, level, text) => {
-          const id = generateId(text);
-          return `<h${level} id="${id}">${text}</h${level}>`;
-        },
-      );
-    }
+    return extractHeadingsFromMdx(content);
   }, [content]);
 
   // 监听滚动事件并更新活动标题
@@ -108,7 +84,7 @@ export function TableOfContents({
     setActiveId(heading.id);
 
     // calc offset
-    const offset = heading.level === "2" ? 80 : 60;
+    const offset = heading.level === 2 ? 80 : 60;
     const y = element.getBoundingClientRect().top + window.scrollY - offset;
 
     window.scrollTo({
@@ -148,7 +124,7 @@ export function TableOfContents({
               }}
               className={cn(
                 "hover:text-foreground inline-block py-1 text-sm transition-colors",
-                heading.level === "3" ? "pl-4" : "",
+                heading.level === 3 ? "pl-4" : "",
                 activeId === heading.id
                   ? "text-primary font-medium"
                   : "text-muted-foreground",

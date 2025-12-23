@@ -12,35 +12,26 @@ export function buildCategoriesFromDocs(docs: MdxDocument[]): Category[] {
   let nextId = 1;
 
   for (const doc of docs) {
-    const slugs =
-      toStringArray(doc.meta.categories) ?? toStringArray(doc.meta.tags);
-    if (!slugs) continue;
-    for (const slug of slugs) {
-      const existing = categories.get(slug);
-      if (existing) {
-        categories.set(slug, { ...existing, count: existing.count + 1 });
-      } else {
-        categories.set(slug, { id: nextId++, name: slug, slug, count: 1 });
-      }
+    const slugPath = doc.path.replace(/\.mdx?$/i, "");
+    const categoryFromPath = slugPath.includes("/")
+      ? slugPath.split("/")[0]
+      : undefined;
+    if (!categoryFromPath) continue;
+    const existing = categories.get(categoryFromPath);
+    if (existing) {
+      categories.set(categoryFromPath, {
+        ...existing,
+        count: existing.count + 1,
+      });
+    } else {
+      categories.set(categoryFromPath, {
+        id: nextId++,
+        name: categoryFromPath,
+        slug: categoryFromPath,
+        count: 1,
+      });
     }
   }
 
   return Array.from(categories.values());
-}
-
-function toStringArray(value: unknown): string[] | undefined {
-  if (Array.isArray(value)) {
-    const arr = value
-      .map((v) => (typeof v === "string" ? v.trim() : String(v)))
-      .filter(Boolean);
-    return arr.length ? arr : undefined;
-  }
-  if (typeof value === "string") {
-    const arr = value
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return arr.length ? arr : undefined;
-  }
-  return undefined;
 }

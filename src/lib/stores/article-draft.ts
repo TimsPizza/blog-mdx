@@ -4,8 +4,12 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 export type ArticleDraft = {
+  title: string;
+  category: string;
+  summary: string;
   content: string;
-  meta: string;
+  uid: string;
+  createdAt: number;
   updatedAt: number;
 };
 

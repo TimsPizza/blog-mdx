@@ -1,12 +1,14 @@
-import { GitHubContentStore } from "@/lib/api/github";
 import { type MdxDocument } from "@/lib/api/types";
+import { listDocuments } from "@/lib/server/content-store";
+import { AppError } from "@/types/error";
+import { okAsync, type ResultAsync } from "neverthrow";
 
 export interface Post {
   id: string;
   slug: string;
   title: { rendered: string };
   excerpt: { rendered: string };
-  content: { rendered: string };
+  content: { mdx: string };
   date: string;
   categories?: number[];
   tags?: string[];
@@ -21,161 +23,112 @@ export interface Category {
   count: number;
 }
 
-type RepoConfig = {
-  owner: string;
-  repo: string;
-  branch?: string;
-};
-
-function parseRepoUrl(url: string | undefined): RepoConfig {
-  if (!url) {
-    throw new Error("MDX_REPO_URL is not set");
-  }
-  const trimmed = url.trim();
-  const match = trimmed.match(
-    /github\.com[:/]+([^/]+)\/([^/#?]+)(?:[#?](.*))?/i,
-  );
-  if (!match) {
-    throw new Error(
-      `MDX_REPO_URL must be a GitHub repo URL like https://github.com/owner/repo (got ${url})`,
-    );
-  }
-  const owner = match[1];
-  const repo = match[2];
-  const rest = match[3];
-  const branch = rest ? rest.replace(/^ref=|^#/, "") : undefined;
-  return {
-    owner,
-    repo: repo.replace(/\.git$/, ""),
-    branch,
-  };
+function fetchDocs(): ResultAsync<MdxDocument[], AppError> {
+  return listDocuments();
 }
 
-const repoConfig = parseRepoUrl(process.env.MDX_REPO_URL);
-const repoToken =
-  process.env.GITHUB_REPO_ACCESS_TOKEN ?? process.env.GITHUB_TOKEN;
-
-if (!repoToken) {
-  throw new Error(
-    "GITHUB_REPO_ACCESS_TOKEN is required to fetch MDX content from GitHub.",
-  );
-}
-
-const client = new GitHubContentStore({
-  owner: repoConfig.owner,
-  repo: repoConfig.repo,
-  branch: repoConfig.branch,
-  docsPath: "content",
-  token: repoToken,
-});
-
-async function fetchDocs(): Promise<MdxDocument[]> {
-  return client.listDocsWithContent();
-}
-
-export async function getAllPosts(params?: {
+export function getAllPosts(params?: {
   search?: string;
   category?: number | string;
   tag?: string;
   status?: "draft" | "published" | "archived";
-}): Promise<Post[]> {
-  const docs = await fetchDocs();
-  const categories = buildCategoryMap(docs);
+}): ResultAsync<Post[], AppError> {
+  return fetchDocs().map((docs) => {
+    const categories = buildCategoryMap(docs);
 
-  let filteredDocs = docs;
-  if (params?.status) {
-    filteredDocs = docs.filter(
-      (doc) => docStatusFromFrontmatter(doc.meta) === params.status,
+    let filteredDocs = docs;
+    if (params?.status) {
+      filteredDocs = docs.filter(
+        (doc) => docStatusFromFrontmatter(doc.meta) === params.status,
+      );
+    }
+
+    let posts = filteredDocs.map((doc) => mdxToPost(doc, categories));
+
+    if (params?.search) {
+      const query = params.search.toLowerCase();
+      posts = posts.filter(
+        (post) =>
+          post.title.rendered.toLowerCase().includes(query) ||
+          post.excerpt.rendered.toLowerCase().includes(query),
+      );
+    }
+
+    if (params?.category) {
+      const catId = Number(params.category);
+      posts = posts.filter((post) => post.categories?.includes(catId));
+    }
+
+    if (params?.tag) {
+      const tag = params.tag.toLowerCase();
+      posts = posts.filter((post) =>
+        post.tags?.some((t) => t.toLowerCase() === tag),
+      );
+    }
+
+    posts.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
-  }
 
-  let posts = filteredDocs.map((doc) => mdxToPost(doc, categories));
-
-  if (params?.search) {
-    const query = params.search.toLowerCase();
-    posts = posts.filter(
-      (post) =>
-        post.title.rendered.toLowerCase().includes(query) ||
-        post.excerpt.rendered.toLowerCase().includes(query),
-    );
-  }
-
-  if (params?.category) {
-    const catId = Number(params.category);
-    posts = posts.filter((post) => post.categories?.includes(catId));
-  }
-
-  if (params?.tag) {
-    const tag = params.tag.toLowerCase();
-    posts = posts.filter((post) =>
-      post.tags?.some((t) => t.toLowerCase() === tag),
-    );
-  }
-
-  posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  return posts;
+    return posts;
+  });
 }
 
-export async function getAllCategories(): Promise<Category[]> {
-  const docs = await fetchDocs();
-  const categories = buildCategoryMap(docs);
-  return Array.from(categories.values());
+export function getAllCategories(): ResultAsync<Category[], AppError> {
+  return fetchDocs().map((docs) =>
+    Array.from(buildCategoryMap(docs).values()),
+  );
 }
 
-export async function getCategoryById(id: number): Promise<Category | null> {
-  const categories = await getAllCategories();
-  return categories.find((cat) => cat.id === id) ?? null;
+export function getCategoryById(
+  id: number,
+): ResultAsync<Category | null, AppError> {
+  return getAllCategories().map(
+    (categories) => categories.find((cat) => cat.id === id) ?? null,
+  );
 }
 
-export async function getAuthorById(): Promise<{ name: string } | null> {
+export function getAuthorById(): ResultAsync<{ name: string } | null, AppError> {
   // Author metadata is not modeled; return a placeholder to satisfy callers.
-  return null;
+  return okAsync(null);
 }
 
-export async function getFeaturedMediaById(
+export function getFeaturedMediaById(
   id: string | number | null,
-): Promise<{ source_url: string } | null> {
-  if (!id) return null;
+): ResultAsync<{ source_url: string } | null, AppError> {
+  if (!id) return okAsync(null);
   const url = String(id);
-  return { source_url: url };
+  return okAsync({ source_url: url });
 }
 
 function mdxToPost(doc: MdxDocument, categories: Map<string, Category>): Post {
-  const slug = stripMdxExtension(doc.slug);
+  const slug = stripMdxExtension(doc.path);
   const title = stringValue(doc.meta.title) ?? slug;
   const summary =
-    stringValue(doc.meta.summary) ??
-    stringValue(doc.meta.description) ??
-    doc.content.slice(0, 200);
-  const content = escapeHtml(doc.content);
+    stringValue(doc.meta.summary) ?? doc.content.slice(0, 200);
   const excerpt = escapeHtml(summary);
 
   const tagList = toStringArray(doc.meta.tags);
-  const categorySlugs = toStringArray(doc.meta.categories ?? tagList);
+  const categoryFromPath = slug.includes("/") ? slug.split("/")[0] : undefined;
+  const categorySlugs = categoryFromPath ? [categoryFromPath] : undefined;
   const categoryIds = categorySlugs
     ?.map((slugItem) => categories.get(slugItem)?.id)
     .filter((id): id is number => typeof id === "number");
 
-  const cover =
-    stringValue(doc.meta.coverImageId) ?? stringValue(doc.meta.cover) ?? null;
+  const cover = stringValue(doc.meta.coverImageUrl) ?? null;
 
   return {
     id: slug,
     slug,
     title: { rendered: escapeHtml(title) },
     excerpt: { rendered: excerpt },
-    content: { rendered: content },
+    content: { mdx: doc.content },
     date:
-      stringValue(doc.meta.date) ??
-      stringValue(doc.meta.publishedAt) ??
+      timestampToIso(doc.meta.createdAt ?? doc.meta.updatedAt) ??
       new Date().toISOString(),
     categories: categoryIds,
     tags: tagList,
     featured_media: cover,
-    meta: {
-      views: numberValue(doc.meta.views),
-    },
   };
 }
 
@@ -188,10 +141,12 @@ function buildCategoryMap(docs: MdxDocument[]): Map<string, Category> {
   let nextId = 1;
 
   for (const doc of docs) {
-    const slugs =
-      toStringArray(doc.meta.categories) ?? toStringArray(doc.meta.tags);
-    if (!slugs) continue;
-    for (const slug of slugs) {
+    const slugPath = stripMdxExtension(doc.path);
+    const categoryFromPath = slugPath.includes("/")
+      ? slugPath.split("/")[0]
+      : undefined;
+    if (!categoryFromPath) continue;
+    const slug = categoryFromPath;
       const existing = categories.get(slug);
       if (existing) {
         categories.set(slug, {
@@ -206,7 +161,6 @@ function buildCategoryMap(docs: MdxDocument[]): Map<string, Category> {
           count: 1,
         });
       }
-    }
   }
 
   return categories;
@@ -214,15 +168,6 @@ function buildCategoryMap(docs: MdxDocument[]): Map<string, Category> {
 
 function stringValue(input: unknown): string | undefined {
   return typeof input === "string" && input.trim() ? input.trim() : undefined;
-}
-
-function numberValue(input: unknown): number | undefined {
-  if (typeof input === "number" && Number.isFinite(input)) return input;
-  if (typeof input === "string") {
-    const num = Number(input);
-    if (Number.isFinite(num)) return num;
-  }
-  return undefined;
 }
 
 function toStringArray(value: unknown): string[] | undefined {
@@ -242,6 +187,11 @@ function toStringArray(value: unknown): string[] | undefined {
   return undefined;
 }
 
+function timestampToIso(value: number | undefined): string | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return new Date(value * 1000).toISOString();
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -252,7 +202,7 @@ function escapeHtml(text: string): string {
 }
 
 function docStatusFromFrontmatter(
-  frontmatter: Record<string, unknown> | undefined,
+  frontmatter?: { status?: unknown } | null,
 ): "draft" | "published" | "archived" | undefined {
   if (!frontmatter) return undefined;
   const value = frontmatter.status;

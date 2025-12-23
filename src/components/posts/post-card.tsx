@@ -6,7 +6,10 @@ import Link from "next/link";
 
 export async function PostCard({ post }: { post: Post }) {
   const media = post.featured_media
-    ? await getFeaturedMediaById(post.featured_media)
+    ? await getFeaturedMediaById(post.featured_media).match(
+        (value) => value,
+        () => null,
+      )
     : null;
   const date = new Date(post.date).toLocaleDateString("zh-CN", {
     year: "numeric",
@@ -14,7 +17,10 @@ export async function PostCard({ post }: { post: Post }) {
     day: "numeric",
   });
   const category = post.categories?.[0]
-    ? await getCategoryById(post.categories[0])
+    ? await getCategoryById(post.categories[0]).match(
+        (value) => value,
+        () => null,
+      )
     : null;
 
   return (

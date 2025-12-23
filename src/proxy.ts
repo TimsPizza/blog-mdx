@@ -7,8 +7,23 @@ type Counter = { count: number; expiresAt: number };
 const rateLimitStore = new Map<string, Counter>();
 
 const PROTECTED_PATHS = [/^\/api\/admin(\/|$)/, /^\/api\/articles(\/|$)/];
+const ADMIN_PATH = /^\/admin(\/|$)/;
 
 export function proxy(req: NextRequest) {
+  const urlPath = req.nextUrl.pathname;
+  if (ADMIN_PATH.test(urlPath)) {
+    const requestPath = `${urlPath}${req.nextUrl.search}`;
+    if (!hasSession(req)) {
+      const signInUrl = req.nextUrl.clone();
+      signInUrl.pathname = "/api/auth/signin";
+      signInUrl.searchParams.set("callbackUrl", requestPath);
+      return NextResponse.redirect(signInUrl);
+    }
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-request-path", requestPath);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   const ip = getClientIp(req);
   if (ip) {
     const limited = checkRateLimit(ip);
@@ -26,7 +41,6 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  const urlPath = req.nextUrl.pathname;
   const needsAuth =
     PROTECTED_PATHS.some((re) => re.test(urlPath)) && req.method !== "GET";
 
@@ -57,9 +71,31 @@ function checkRateLimit(key: string): { retryAfter: number } | null {
 
 function hasSession(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
+  const cookieHeader = req.headers.get("cookie");
   if (auth && auth.startsWith("Bearer ")) return true;
-  const cookie = req.cookies.get("session_token");
-  return !!cookie?.value;
+  const legacy = req.cookies.get("session_token");
+  if (legacy?.value) return true;
+  const sessionToken =
+    req.cookies.get("next-auth.session-token")?.value ??
+    req.cookies.get("__Secure-next-auth.session-token")?.value ??
+    req.cookies.get("__Host-next-auth.session-token")?.value ??
+    readCookie(cookieHeader, "next-auth.session-token") ??
+    readCookie(cookieHeader, "__Secure-next-auth.session-token") ??
+    readCookie(cookieHeader, "__Host-next-auth.session-token");
+  return !!sessionToken;
+}
+
+function readCookie(header: string | null, name: string): string | null {
+  if (!header) return null;
+  const target = `${name}=`;
+  const parts = header.split(";");
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(target)) {
+      return trimmed.slice(target.length);
+    }
+  }
+  return null;
 }
 
 function getClientIp(req: NextRequest): string | null {
@@ -74,5 +110,5 @@ function getClientIp(req: NextRequest): string | null {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/api/:path*", "/admin/:path*"],
 };

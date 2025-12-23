@@ -1,21 +1,21 @@
 export type DocStatus = "draft" | "published" | "archived";
 
 export interface MdxDocument {
-  slug: string; // e.g. posts/hello-world.mdx
-  meta: Record<string, unknown>;
+  path: string; // e.g. posts/hello-world.mdx
+  meta: MdxDocumentMeta;
   content: string; // MDX content
   sha: string; // Git blob SHA (ETag anchor)
 }
 
 export interface MdxDocumentMeta {
-  slug: string;
   title?: string;
   summary?: string;
   tags?: string[];
-  coverImageId?: string;
+  coverImageUrl?: string;
   status: DocStatus;
-  sha: string; // Blob SHA for the MDX file
-  updatedAt?: string; // ISO timestamp cached from git history
+  uid: string; // Unique identifier for the document
+  createdAt?: number; // Unix timestamp (seconds)
+  updatedAt?: number; // Unix timestamp (seconds)
 }
 
 export type MediaKind = "image" | "video" | "audio" | "binary";
@@ -61,7 +61,7 @@ export interface ListDocsResponse {
 }
 
 export interface UpsertDocRequest {
-  slug: string;
+  path: string;
   content: string; // MDX content
   meta?: Record<string, unknown>; // Structured metadata to write to meta.json
   sha?: string; // Required for updates to enforce optimistic locking
@@ -69,13 +69,13 @@ export interface UpsertDocRequest {
 }
 
 export interface UpsertDocResponse {
-  slug: string;
+  path: string;
   newSha: string; // New blob SHA
   commitSha: string; // Commit SHA that wrote the file
 }
 
 export interface DeleteDocRequest {
-  slug: string;
+  path: string;
   sha: string; // Blob SHA to avoid deleting stale content
   message: string;
 }
@@ -86,7 +86,7 @@ export interface DeleteDocResponse {
 }
 
 export interface ArchiveDocRequest {
-  slug: string;
+  path: string;
   expectedSha?: string; // Optional sanity check against metadata entry
   message: string;
 }
@@ -126,7 +126,7 @@ export interface RefreshSessionResponse {
 }
 
 export interface UnarchiveDocRequest {
-  slug: string;
+  path: string;
   expectedSha?: string;
   message: string;
 }
@@ -138,7 +138,7 @@ export interface UnarchiveDocResponse {
 
 export interface BlogApiClient {
   listDocs(req: ListDocsRequest): Promise<ListDocsResponse>;
-  getDoc(slug: string): Promise<GetDocResponse>;
+  getDoc(path: string): Promise<GetDocResponse>;
   upsertDoc(req: UpsertDocRequest): Promise<UpsertDocResponse>;
   deleteDoc(req: DeleteDocRequest): Promise<DeleteDocResponse>;
   archiveDoc(req: ArchiveDocRequest): Promise<ArchiveDocResponse>;

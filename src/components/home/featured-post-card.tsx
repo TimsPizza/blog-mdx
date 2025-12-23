@@ -1,6 +1,7 @@
+import { stripMarkdown } from "@/components/mdx/heading-utils";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { type Post } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,7 +34,7 @@ export function FeaturedPostCard({
 
   // estimate reading time
   const readingTime = Math.ceil(
-    post.content.rendered.replace(/<[^>]*>/g, "").length / 300,
+    stripMarkdown(post.content.mdx).length / 300,
   );
 
   return (

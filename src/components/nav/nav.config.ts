@@ -1,3 +1,5 @@
+import { SiteConfig } from "@/types/layout";
+
 // Define the menu items
 export const mainMenu = {
   categories: "/posts/categories",

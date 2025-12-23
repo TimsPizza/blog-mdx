@@ -1,12 +1,11 @@
 {
-  "completed_task_counter": 12,
-  "last_snapshot_commit": "c52ff5e5adfe9f27bdec68e4b236d5cbc1c53baa",
-  "last_impl_index": 3,
-  "last_impl_time": "2025-12-02T21:26:11Z",
+  "completed_task_counter": 56,
+  "last_snapshot_commit": "c4c4c370b85a072cab285f512c3f7078649c8442",
+  "last_impl_index": 18,
+  "last_impl_time": "2025-12-23T22:00:16Z",
   "pending_tasks": [],
   "done_tasks_since_last_impl": [
-    "Admin article list with toolbar, bulk archive/unarchive, and draft dialog",
-    "Restore admin article page as server component fetching metadata",
-    "Add new-article page with client editor entry"
+    "Align session schema to snake_case and return auth to Drizzle",
+    "Adopt neverthrow/AppError flow for server data paths and API boundaries"
   ]
 }

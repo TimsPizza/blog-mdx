@@ -4,7 +4,10 @@ import { ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
 
 export async function FeaturedPosts() {
-  const posts = (await getAllPosts()).slice(0, 4);
+  const posts = await getAllPosts().match(
+    (items) => items.slice(0, 4),
+    () => [],
+  );
 
   return (
     <Section className="bg-muted/50 py-12">

@@ -1,569 +1,616 @@
 import {
   type ArchiveDocRequest,
   type ArchiveDocResponse,
-  type BlogApiClient,
   type DeleteDocRequest,
   type DeleteDocResponse,
-  type GetDocResponse,
-  type ListDocsRequest,
-  type ListDocsResponse,
-  type DocStatus,
   type MdxDocument,
   type MdxDocumentMeta,
   type UnarchiveDocRequest,
-  type UnarchiveDocResponse,
   type UpsertDocRequest,
   type UpsertDocResponse,
-} from "./types";
+} from "@/lib/api/types";
+import { AppError } from "@/types/error";
+import { Octokit } from "octokit";
+import { err, ok, okAsync, ResultAsync } from "neverthrow";
 
-export interface GitHubRepoConfig {
+type GitHubContentStoreConfig = {
   owner: string;
   repo: string;
   branch?: string;
   docsPath?: string;
-  token?: string;
-  apiBaseUrl?: string;
-}
+  token: string;
+};
 
-type GraphQLTreeEntry = {
+type GitHubFileEntry = {
   name: string;
-  type: "blob" | "tree";
-  object?: GraphQLTreeObject | null;
-};
-
-type GraphQLTreeObject =
-  | {
-      __typename: "Blob";
-      text: string | null;
-      oid: string;
-    }
-  | {
-      __typename: "Tree";
-      entries: GraphQLTreeEntry[];
-    };
-
-type GraphQLTreeResponse = {
-  data?: {
-    repository?: {
-      object?: {
-        entries?: GraphQLTreeEntry[];
-      } | null;
-    } | null;
-  };
-  errors?: Array<{ message: string }>;
-};
-
-type GitHubContentResponse = {
-  type: "file";
-  content: string;
+  path: string;
   sha: string;
-  encoding: "base64";
+  type: "file" | "dir";
 };
 
-type GitHubWriteResponse = {
-  content: {
-    sha: string;
-  };
-  commit: {
-    sha: string;
-  };
+type ParsedFrontmatter = {
+  meta: Record<string, unknown>;
+  body: string;
 };
 
-const DEFAULT_DOCS_PATH = "content";
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n?/;
 
-export class GitHubContentStore implements BlogApiClient {
-  private readonly owner: string;
-  private readonly repo: string;
-  private readonly branch: string;
-  private readonly docsPath: string;
-  private readonly token?: string;
-  private readonly apiBaseUrl: string;
-
-  constructor(config: GitHubRepoConfig) {
-    this.owner = config.owner;
-    this.repo = config.repo;
-    this.branch = config.branch ?? "main";
-    this.docsPath = (config.docsPath ?? DEFAULT_DOCS_PATH)
-      .replace(/^\/+/, "")
-      .replace(/\/+$/, "");
-    this.token =
-      config.token ??
-      process.env.GITHUB_REPO_ACCESS_TOKEN ??
-      process.env.GITHUB_TOKEN;
-    this.apiBaseUrl = config.apiBaseUrl ?? "https://api.github.com";
-
-    if (!this.token) {
-      throw new Error(
-        "GitHub token missing: set GITHUB_REPO_ACCESS_TOKEN (fine-grained) or GITHUB_TOKEN",
-      );
-    }
+function parseFrontmatter(source: string): ParsedFrontmatter {
+  if (!source.startsWith("---")) {
+    return { meta: {}, body: source };
   }
-
-  /**
-   * Fetch all documents (meta + content) in a single GraphQL round-trip.
-   * This keeps MDX as the single source of truth (no separate metadata index).
-   */
-  async listDocsWithContent(): Promise<MdxDocument[]> {
-    return this.readDocsViaGraphQL();
+  const match = source.match(FRONTMATTER_REGEX);
+  if (!match) {
+    return { meta: {}, body: source };
   }
-
-  async listDocs(req: ListDocsRequest): Promise<ListDocsResponse> {
-    const docs = await this.readDocsViaGraphQL();
-    const metas = docs.map(deriveMetaFromDoc);
-
-    const filtered = metas
-      .filter((meta) => (req.status ? meta.status === req.status : true))
-      .filter((meta) => (req.tag ? meta.tags?.includes(req.tag) : true));
-
-    const limit = req.limit ?? 20;
-    const cursorIndex = req.cursor ? Number(req.cursor) : 0;
-    const paged = filtered.slice(cursorIndex, cursorIndex + limit);
-    const nextCursor =
-      cursorIndex + limit < filtered.length
-        ? String(cursorIndex + limit)
-        : undefined;
-
-    return { items: paged, nextCursor };
-  }
-
-  async getDoc(slug: string): Promise<GetDocResponse> {
-    const contentPath = this.joinPath(this.docsPath, slug, "content.mdx");
-    const metaPath = this.joinPath(this.docsPath, slug, "meta.json");
-
-    const { content, sha } = await this.readRepoFile(contentPath);
-    let metaObj: Record<string, unknown> = {};
-    try {
-      const metaFile = await this.readRepoFile(metaPath);
-      metaObj = JSON.parse(metaFile.content) as Record<string, unknown>;
-    } catch {
-      // ignore missing meta
-    }
-
-    const doc: MdxDocument = { slug, meta: metaObj, content, sha };
-    return { doc };
-  }
-
-  async upsertDoc(req: UpsertDocRequest): Promise<UpsertDocResponse> {
-    const contentPath = this.joinPath(this.docsPath, req.slug, "content.mdx");
-    const metaPath = this.joinPath(this.docsPath, req.slug, "meta.json");
-
-    const contentWrite = await this.writeRepoFile({
-      path: contentPath,
-      content: req.content,
-      message: req.message,
-      sha: req.sha,
-    });
-
-    await this.writeRepoFile({
-      path: metaPath,
-      content: JSON.stringify(req.meta ?? {}, null, 2),
-      message: req.message,
-    });
-
-    return {
-      slug: req.slug,
-      newSha: contentWrite.contentSha,
-      commitSha: contentWrite.commitSha,
-    };
-  }
-
-  async deleteDoc(req: DeleteDocRequest): Promise<DeleteDocResponse> {
-    const docPath = this.joinPath(this.docsPath, req.slug, "content.mdx");
-    const deleteCommitSha = await this.deleteRepoFile({
-      path: docPath,
-      sha: req.sha,
-      message: req.message,
-    });
-    const metaPath = this.joinPath(this.docsPath, req.slug, "meta.json");
-    try {
-      const meta = await this.readRepoFile(metaPath);
-      await this.deleteRepoFile({
-        path: metaPath,
-        sha: meta.sha,
-        message: req.message,
-      });
-    } catch {
-      // ignore missing meta
-    }
-
-    return {
-      deleted: true,
-      commitSha: deleteCommitSha ?? req.sha,
-    };
-  }
-
-  async archiveDoc(req: ArchiveDocRequest): Promise<ArchiveDocResponse> {
-    return this.updateDocStatus({
-      slug: req.slug,
-      targetStatus: "archived",
-      expectedSha: req.expectedSha,
-      message: req.message,
-    });
-  }
-
-  async unarchiveDoc(req: UnarchiveDocRequest): Promise<UnarchiveDocResponse> {
-    return this.updateDocStatus({
-      slug: req.slug,
-      targetStatus: "draft",
-      expectedSha: req.expectedSha,
-      message: req.message,
-    });
-  }
-
-  private async updateDocStatus(args: {
-    slug: string;
-    targetStatus: DocStatus;
-    expectedSha?: string;
-    message: string;
-  }): Promise<ArchiveDocResponse | UnarchiveDocResponse> {
-    const metaPath = this.joinPath(this.docsPath, args.slug, "meta.json");
-    const metaFile = await this.readRepoFile(metaPath);
-    const metaObj = JSON.parse(metaFile.content) as Record<string, unknown>;
-    if (args.expectedSha && args.expectedSha !== metaFile.sha) {
-      throw new Error(
-        `Stale metadata for ${args.slug}: expected ${args.expectedSha}, found ${metaFile.sha}`,
-      );
-    }
-    const nextFrontmatter = { ...metaObj, status: args.targetStatus };
-    const writeResult = await this.writeRepoFile({
-      path: metaPath,
-      content: JSON.stringify(nextFrontmatter, null, 2),
-      message: args.message,
-      sha: metaFile.sha,
-    });
-    return { status: args.targetStatus, commitSha: writeResult.commitSha };
-  }
-
-  private async readDocsViaGraphQL(): Promise<MdxDocument[]> {
-    const expression = `${this.branch}:${this.docsPath}`;
-    const query = `
-      query ListDocs($owner: String!, $name: String!, $expression: String!) {
-        repository(owner: $owner, name: $name) {
-          object(expression: $expression) {
-            ... on Tree {
-              entries {
-                name
-                type
-                object {
-                  __typename
-                  ... on Blob {
-                    text
-                    oid
-                  }
-                  ... on Tree {
-                    entries {
-                      name
-                      type
-                      object {
-                        __typename
-                        ... on Blob {
-                          text
-                          oid
-                        }
-                        ... on Tree {
-                          entries {
-                            name
-                            type
-                            object {
-                              __typename
-                              ... on Blob {
-                                text
-                                oid
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const res = await fetch(`${this.apiBaseUrl}/graphql`, {
-      method: "POST",
-      headers: {
-        ...this.buildHeaders(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          owner: this.owner,
-          name: this.repo,
-          expression,
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`GraphQL listing failed: ${res.status} ${text}`);
-    }
-
-    const json = (await res.json()) as GraphQLTreeResponse;
-    if (json.errors?.length) {
-      const msg = json.errors.map((e) => e.message).join("; ");
-      throw new Error(`GraphQL errors: ${msg}`);
-    }
-
-    const entries = json.data?.repository?.object?.entries;
-    if (!entries) {
-      return [];
-    }
-
-    const flattened = flattenTree(entries, "");
-    return groupBySlug(flattened, this.docsPath);
-  }
-
-  private async readRepoFile(
-    path: string,
-  ): Promise<{ content: string; sha: string }> {
-    const url = `${this.apiBaseUrl}/repos/${this.owner}/${this.repo}/contents/${encodeURIComponentPath(
-      path,
-    )}?ref=${encodeURIComponent(this.branch)}`;
-
-    const res = await fetch(url, {
-      headers: this.buildHeaders(),
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      throw new Error(
-        `Failed to read ${path}: ${res.status} ${res.statusText}`,
-      );
-    }
-
-    const json = (await res.json()) as GitHubContentResponse;
-    const buffer = Buffer.from(json.content, json.encoding);
-    const content = buffer.toString("utf8");
-
-    return { content, sha: json.sha };
-  }
-
-  private async writeRepoFile(args: {
-    path: string;
-    content: string;
-    message: string;
-    sha?: string;
-  }): Promise<{ contentSha: string; commitSha: string }> {
-    const url = `${this.apiBaseUrl}/repos/${this.owner}/${this.repo}/contents/${encodeURIComponentPath(
-      args.path,
-    )}`;
-    const body = JSON.stringify({
-      message: args.message,
-      content: Buffer.from(args.content, "utf8").toString("base64"),
-      sha: args.sha,
-      branch: this.branch,
-    });
-
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: {
-        ...this.buildHeaders(),
-        "Content-Type": "application/json",
-      },
-      body,
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Failed to write ${args.path}: ${res.status} ${text}`);
-    }
-
-    const json = (await res.json()) as GitHubWriteResponse;
-    return {
-      contentSha: json.content.sha,
-      commitSha: json.commit.sha,
-    };
-  }
-
-  private async deleteRepoFile(args: {
-    path: string;
-    sha: string;
-    message: string;
-  }): Promise<string | undefined> {
-    const url = `${this.apiBaseUrl}/repos/${this.owner}/${this.repo}/contents/${encodeURIComponentPath(
-      args.path,
-    )}`;
-    const body = JSON.stringify({
-      message: args.message,
-      sha: args.sha,
-      branch: this.branch,
-    });
-
-    const res = await fetch(url, {
-      method: "DELETE",
-      headers: {
-        ...this.buildHeaders(),
-        "Content-Type": "application/json",
-      },
-      body,
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Failed to delete ${args.path}: ${res.status} ${text}`);
-    }
-
-    try {
-      const json = (await res.json()) as GitHubWriteResponse;
-      return json.commit.sha;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private buildHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    };
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
-    return headers;
-  }
-
-  private joinPath(...parts: string[]) {
-    return parts
-      .filter(Boolean)
-      .join("/")
-      .replace(/\/{2,}/g, "/")
-      .replace(/^\/+/, "");
-  }
+  const raw = match[1] ?? "";
+  const body = source.slice(match[0].length);
+  return { meta: parseYamlMetadata(raw), body };
 }
 
-function flattenTree(
-  entries: GraphQLTreeEntry[],
-  prefix: string,
-): Array<{ path: string; text: string | null; sha?: string }> {
-  const files: Array<{ path: string; text: string | null; sha?: string }> = [];
-  for (const entry of entries) {
-    const currentPath = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (!entry.object) continue;
-    if (entry.object.__typename === "Blob") {
-      files.push({
-        path: currentPath,
-        text: entry.object.text,
-        sha: entry.object.oid,
-      });
-    } else if (entry.object.__typename === "Tree" && entry.object.entries) {
-      files.push(...flattenTree(entry.object.entries, currentPath));
+function parseYamlMetadata(raw: string): Record<string, unknown> {
+  const meta: Record<string, unknown> = {};
+  const lines = raw.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const [key, ...rest] = trimmed.split(":");
+    if (!key) continue;
+    const value = rest.join(":").trim();
+    if (!value) {
+      meta[key] = "";
+      continue;
     }
+    if (value.startsWith("[") && value.endsWith("]")) {
+      const inner = value.slice(1, -1).trim();
+      meta[key] = inner
+        ? inner
+            .split(",")
+            .map((item) => item.trim().replace(/^["']|["']$/g, ""))
+        : [];
+      continue;
+    }
+    if (value === "true" || value === "false") {
+      meta[key] = value === "true";
+      continue;
+    }
+    const num = Number(value);
+    if (!Number.isNaN(num) && value !== "") {
+      meta[key] = num;
+      continue;
+    }
+    meta[key] = value.replace(/^["']|["']$/g, "");
   }
-  return files;
+  return meta;
 }
 
-function groupBySlug(
-  entries: Array<{ path: string; text: string | null; sha?: string }>,
-  docsPath: string,
-): MdxDocument[] {
-  const normalizedPrefix = docsPath.replace(/^\/+|\/+$/g, "");
-  const prefix = normalizedPrefix ? `${normalizedPrefix}/` : "";
-  const buckets = new Map<
-    string,
-    {
-      content?: string | null;
-      contentSha?: string;
-      meta?: string | null;
-      metaSha?: string;
+function serializeFrontmatter(meta: Record<string, unknown>): string {
+  const entries = Object.entries(meta).filter(
+    ([, value]) => value !== undefined,
+  );
+  if (entries.length === 0) return "";
+  const lines = entries.map(([key, value]) => {
+    if (Array.isArray(value)) {
+      const items = value
+        .map((item) => JSON.stringify(String(item)))
+        .join(", ");
+      return `${key}: [${items}]`;
     }
-  >();
-
-  for (const entry of entries) {
-    if (!entry.path.startsWith(prefix)) continue;
-    const rel = entry.path.slice(prefix.length);
-    const parts = rel.split("/");
-    if (parts.length < 2) continue;
-    const slug = parts[0];
-    const file = parts.slice(1).join("/");
-    const bucket = buckets.get(slug) ?? {};
-    if (file === "content.mdx") {
-      bucket.content = entry.text;
-      bucket.contentSha = entry.sha;
-    } else if (file === "meta.json") {
-      bucket.meta = entry.text;
-      bucket.metaSha = entry.sha;
+    if (typeof value === "number" || typeof value === "boolean") {
+      return `${key}: ${String(value)}`;
     }
-    buckets.set(slug, bucket);
-  }
-
-  const docs: MdxDocument[] = [];
-  for (const [slug, bucket] of buckets.entries()) {
-    let meta: Record<string, unknown> = {};
-    if (bucket.meta) {
-      try {
-        meta = JSON.parse(bucket.meta) as Record<string, unknown>;
-      } catch {
-        meta = {};
-      }
+    if (value === null) {
+      return `${key}: null`;
     }
-    const body = bucket.content ?? "";
-    docs.push({
-      slug,
-      meta,
-      content: body,
-      sha: bucket.contentSha ?? "",
-    });
-  }
-  return docs;
+    return `${key}: ${JSON.stringify(String(value))}`;
+  });
+  return `---\n${lines.join("\n")}\n---\n\n`;
 }
 
-function deriveMetaFromDoc(doc: MdxDocument): MdxDocumentMeta {
-  const status = normalizeStatus(doc.meta.status) ?? "draft";
-  const tags = toStringArray(doc.meta.tags);
+function applyFrontmatter(
+  content: string,
+  meta?: Record<string, unknown>,
+): string {
+  if (!meta || Object.keys(meta).length === 0) return content;
+  const { body } = parseFrontmatter(content);
+  return `${serializeFrontmatter(meta)}${body}`;
+}
+
+function normalizeMeta(
+  meta: Record<string, unknown>,
+  path: string,
+): MdxDocumentMeta {
+  const uid = stringValue(meta.uid) ?? path.replace(/\.mdx?$/i, "");
+  const statusRaw = stringValue(meta.status);
+  const inferredStatus = path.startsWith("archived/") ? "archived" : "draft";
+  const status =
+    statusRaw === "published" ||
+    statusRaw === "archived" ||
+    statusRaw === "draft"
+      ? statusRaw
+      : inferredStatus;
   return {
-    slug: doc.slug,
-    title: typeof doc.meta.title === "string" ? doc.meta.title : undefined,
-    summary:
-      typeof doc.meta.summary === "string"
-        ? doc.meta.summary
-        : typeof doc.meta.description === "string"
-          ? doc.meta.description
-          : undefined,
-    tags,
-    coverImageId:
-      typeof doc.meta.coverImageId === "string"
-        ? doc.meta.coverImageId
-        : typeof doc.meta.cover === "string"
-          ? doc.meta.cover
-          : undefined,
+    uid,
     status,
-    sha: doc.sha,
-    updatedAt:
-      typeof doc.meta.updatedAt === "string" ? doc.meta.updatedAt : undefined,
+    title: stringValue(meta.title),
+    summary: stringValue(meta.summary),
+    tags: toStringArray(meta.tags),
+    coverImageUrl: stringValue(meta.coverImageUrl),
+    createdAt: numberValue(meta.createdAt),
+    updatedAt: numberValue(meta.updatedAt),
   };
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const num = Number(value);
+    if (Number.isFinite(num)) return num;
+  }
+  return undefined;
 }
 
 function toStringArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
-    return value.map((v) => String(v)).filter(Boolean);
+    const arr = value
+      .map((item) => (typeof item === "string" ? item.trim() : String(item)))
+      .filter(Boolean);
+    return arr.length ? arr : undefined;
   }
   if (typeof value === "string") {
-    return value
+    const arr = value
       .split(",")
-      .map((s) => s.trim())
+      .map((item) => item.trim())
       .filter(Boolean);
+    return arr.length ? arr : undefined;
   }
   return undefined;
 }
 
-function normalizeStatus(value: unknown): DocStatus | undefined {
-  if (typeof value !== "string") return undefined;
-  if (value === "draft" || value === "published" || value === "archived") {
-    return value;
+function ensureMdxExtension(path: string): string {
+  return path.endsWith(".mdx") ? path : `${path}.mdx`;
+}
+
+function normalizePath(path: string): string {
+  return path.replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+type GitHubErrorLike = {
+  status?: number;
+  response?: { status?: number };
+};
+
+function getGitHubStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const candidate = error as GitHubErrorLike;
+  if (typeof candidate.status === "number") return candidate.status;
+  if (typeof candidate.response?.status === "number") {
+    return candidate.response.status;
   }
   return undefined;
 }
 
-function encodeURIComponentPath(path: string) {
-  return path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
+function mapGitHubError(error: unknown, message: string): AppError {
+  const status = getGitHubStatus(error);
+  if (status === 404) return AppError.notFound(message);
+  if (status === 409) return AppError.conflict(message);
+  if (status === 401) return AppError.unauthorized(message);
+  return AppError.fromUnknown(error, { tag: "FETCH", message });
+}
+
+export class GitHubContentStore {
+  private readonly owner: string;
+  private readonly repo: string;
+  private readonly branch?: string;
+  private readonly docsPath: string;
+  private readonly octokit: Octokit;
+
+  constructor(config: GitHubContentStoreConfig) {
+    this.owner = config.owner;
+    this.repo = config.repo;
+    this.branch = config.branch;
+    this.docsPath = normalizePath(config.docsPath ?? "");
+    this.octokit = new Octokit({ auth: config.token });
+  }
+
+  listAllCategories(): ResultAsync<string[], AppError> {
+    return this.listDirectory(this.docsPath).map((entries) =>
+      entries
+        .filter((entry) => entry.type === "dir")
+        .map((entry) => entry.name),
+    );
+  }
+
+  listDocsByCategory(category: string): ResultAsync<MdxDocument[], AppError> {
+    const categoryPath = this.joinPath(this.docsPath, category);
+    return this.listDirectory(categoryPath).andThen((entries) => {
+      const mdxFiles = entries.filter(
+        (entry) => entry.type === "file" && entry.name.endsWith(".mdx"),
+      );
+      return ResultAsync.combine(
+        mdxFiles.map((entry) => this.getDoc(entry.path)),
+      );
+    });
+  }
+
+  listDocsWithContent(): ResultAsync<MdxDocument[], AppError> {
+    return this.listAllCategories().andThen((categories) =>
+      ResultAsync.combine(
+        categories.map((category) => this.listDocsByCategory(category)),
+      ).map((batches) => batches.flat()),
+    );
+  }
+
+  getDoc(pathToMdxFile: string): ResultAsync<MdxDocument, AppError> {
+    const resolvedPath = this.resolveDocPath(pathToMdxFile);
+    return this.readFile(resolvedPath).map((file) => {
+      const { meta, body } = parseFrontmatter(file.content);
+      const docPath = this.toDocPath(resolvedPath);
+      return {
+        path: docPath,
+        content: body,
+        meta: normalizeMeta(meta, docPath),
+        sha: file.sha,
+      };
+    });
+  }
+
+  upsertDoc(
+    pathOrRequest: string | UpsertDocRequest,
+    mdxFileJson?: {
+      content: string;
+      meta?: Record<string, unknown>;
+      sha?: string;
+      message?: string;
+    },
+  ): ResultAsync<UpsertDocResponse, AppError> {
+    const request =
+      typeof pathOrRequest === "string"
+        ? {
+            path: pathOrRequest,
+            content: mdxFileJson?.content ?? "",
+            meta: mdxFileJson?.meta,
+            sha: mdxFileJson?.sha,
+            message: mdxFileJson?.message ?? `chore: update ${pathOrRequest}`,
+          }
+        : pathOrRequest;
+    const resolvedPath = this.resolveDocPath(request.path);
+    const message =
+      request.message ?? `chore: update ${this.toDocPath(resolvedPath)}`;
+    const nextContent = applyFrontmatter(request.content, request.meta);
+    return this.writeFile({
+      path: resolvedPath,
+      content: nextContent,
+      sha: request.sha,
+      message,
+    }).map((result) => ({
+      path: this.toDocPath(resolvedPath),
+      newSha: result.contentSha,
+      commitSha: result.commitSha,
+    }));
+  }
+
+  changeDocCategory(
+    pathToMdxFile: string,
+    newCategory: string,
+  ): ResultAsync<{ path: string; commitSha: string }, AppError> {
+    const resolvedPath = this.resolveDocPath(pathToMdxFile);
+    const baseName = resolvedPath.split("/").pop() ?? resolvedPath;
+    const newPath = this.joinPath(this.docsPath, newCategory, baseName);
+    return this.moveDocInternal(resolvedPath, newPath, {
+      message: `chore: move ${this.toDocPath(resolvedPath)} to ${newCategory}`,
+    }).map((result) => ({
+      path: this.toDocPath(newPath),
+      commitSha: result.commitSha,
+    }));
+  }
+
+  archiveDoc(
+    pathOrRequest: string | ArchiveDocRequest,
+  ): ResultAsync<ArchiveDocResponse, AppError> {
+    const request =
+      typeof pathOrRequest === "string"
+        ? { path: pathOrRequest, message: `chore: archive ${pathOrRequest}` }
+        : pathOrRequest;
+    const resolvedPath = this.resolveDocPath(request.path);
+    const checkSha: ResultAsync<
+      { content: string; sha: string } | null,
+      AppError
+    > = request.expectedSha
+      ? this.readFile(resolvedPath)
+          .andThen((current) => {
+            if (current.sha !== request.expectedSha) {
+              return err(
+                AppError.conflict(`Archive conflict for ${request.path}`),
+              );
+            }
+            return ok(current);
+          })
+          .map((current) => current as { content: string; sha: string } | null)
+      : okAsync<{ content: string; sha: string } | null, AppError>(null);
+
+    return checkSha.andThen(() => {
+      const baseName = resolvedPath.split("/").pop() ?? resolvedPath;
+      const archivedPath = this.joinPath(this.docsPath, "archived", baseName);
+      return this.moveDocInternal(resolvedPath, archivedPath, {
+        message:
+          request.message ?? `chore: archive ${this.toDocPath(resolvedPath)}`,
+        transform: (content) => {
+          const { meta, body } = parseFrontmatter(content);
+          const nextMeta = { ...meta, status: "archived" };
+          return applyFrontmatter(body, nextMeta);
+        },
+      }).map((moveResult) => ({
+        status: "archived" as const,
+        commitSha: moveResult.commitSha,
+      }));
+    });
+  }
+
+  unarchiveDoc(
+    pathOrRequest: string | UnarchiveDocRequest,
+  ): ResultAsync<ArchiveDocResponse, AppError> {
+    const request =
+      typeof pathOrRequest === "string"
+        ? { path: pathOrRequest, message: `chore: unarchive ${pathOrRequest}` }
+        : pathOrRequest;
+    const resolvedPath = this.resolveDocPath(request.path);
+    const checkSha: ResultAsync<
+      { content: string; sha: string } | null,
+      AppError
+    > = request.expectedSha
+      ? this.readFile(resolvedPath)
+          .andThen((current) => {
+            if (current.sha !== request.expectedSha) {
+              return err(
+                AppError.conflict(`Unarchive conflict for ${request.path}`),
+              );
+            }
+            return ok(current);
+          })
+          .map((current) => current as { content: string; sha: string } | null)
+      : okAsync<{ content: string; sha: string } | null, AppError>(null);
+
+    return checkSha.andThen(() => {
+      const baseName = resolvedPath.split("/").pop() ?? resolvedPath;
+      return this.readFile(resolvedPath).andThen((existing) => {
+        const { meta } = parseFrontmatter(existing.content);
+        const category =
+          typeof meta.category === "string" && meta.category.trim()
+            ? meta.category.trim()
+            : "drafts";
+        const nextPath = this.joinPath(this.docsPath, category, baseName);
+        return this.moveDocInternal(resolvedPath, nextPath, {
+          message:
+            request.message ??
+            `chore: unarchive ${this.toDocPath(resolvedPath)}`,
+          transform: (content) => {
+            const { meta: currentMeta, body } = parseFrontmatter(content);
+            const nextMeta = { ...currentMeta, status: "draft" };
+            return applyFrontmatter(body, nextMeta);
+          },
+        }).map((moveResult) => ({
+          status: "draft" as const,
+          commitSha: moveResult.commitSha,
+        }));
+      });
+    });
+  }
+
+  deleteDoc(
+    pathOrRequest: string | DeleteDocRequest,
+  ): ResultAsync<DeleteDocResponse, AppError> {
+    const request =
+      typeof pathOrRequest === "string"
+        ? {
+            path: pathOrRequest,
+            sha: "",
+            message: `chore: delete ${pathOrRequest}`,
+          }
+        : pathOrRequest;
+    const resolvedPath = this.resolveDocPath(request.path);
+    const resolveSha = request.sha
+      ? okAsync<string, AppError>(request.sha)
+      : this.readFile(resolvedPath).map((file) => file.sha);
+    return resolveSha.andThen((sha) =>
+      this.deleteFile({
+        path: resolvedPath,
+        sha,
+        message:
+          request.message ?? `chore: delete ${this.toDocPath(resolvedPath)}`,
+      }).map((result) => ({
+        deleted: true as const,
+        commitSha: result.commitSha,
+      })),
+    );
+  }
+
+  moveDoc(
+    oldPath: string,
+    newPath: string,
+  ): ResultAsync<{ commitSha: string }, AppError> {
+    return this.moveDocInternal(
+      this.resolveDocPath(oldPath),
+      this.resolveDocPath(newPath),
+      {
+        message: `chore: move ${oldPath} to ${newPath}`,
+      },
+    );
+  }
+
+  private moveDocInternal(
+    oldPath: string,
+    newPath: string,
+    options: {
+      message: string;
+      transform?: (content: string) => string;
+    },
+  ): ResultAsync<{ commitSha: string }, AppError> {
+    return this.readFile(oldPath).andThen((file) => {
+      const nextContent = options.transform
+        ? options.transform(file.content)
+        : file.content;
+      return this.writeFile({
+        path: newPath,
+        content: nextContent,
+        message: options.message,
+      }).andThen((createResult) =>
+        this.deleteFile({
+          path: oldPath,
+          sha: file.sha,
+          message: options.message,
+        }).map(() => ({ commitSha: createResult.commitSha })),
+      );
+    });
+  }
+
+  private resolveDocPath(pathToMdxFile: string): string {
+    const normalized = normalizePath(pathToMdxFile);
+    const withExt = ensureMdxExtension(normalized);
+    if (!this.docsPath) return withExt;
+    if (withExt.startsWith(`${this.docsPath}/`)) return withExt;
+    return this.joinPath(this.docsPath, withExt);
+  }
+
+  private toDocPath(fullPath: string): string {
+    if (!this.docsPath) return normalizePath(fullPath);
+    const prefix = `${this.docsPath}/`;
+    return fullPath.startsWith(prefix)
+      ? fullPath.slice(prefix.length)
+      : fullPath;
+  }
+
+  private joinPath(...segments: string[]): string {
+    return segments
+      .filter((segment) => segment && segment.trim())
+      .map((segment) => segment.replace(/^\/+|\/+$/g, ""))
+      .join("/");
+  }
+
+  private request<T>(
+    promise: Promise<T>,
+    message: string,
+  ): ResultAsync<T, AppError> {
+    return ResultAsync.fromPromise(promise, (error) =>
+      mapGitHubError(error, message),
+    );
+  }
+
+  private listDirectory(path: string): ResultAsync<GitHubFileEntry[], AppError> {
+    const normalized = normalizePath(path);
+    return this.request(
+      this.octokit.rest.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalized || "",
+        ref: this.branch,
+      }),
+      `Failed to list ${normalized || "root"}`,
+    ).map((response) => {
+      if (Array.isArray(response.data)) {
+        return response.data
+          .filter((entry) => entry.type === "file" || entry.type === "dir")
+          .map((entry) => ({
+            name: entry.name,
+            path: entry.path,
+            sha: entry.sha,
+            type: entry.type as "file" | "dir",
+          }));
+      }
+      return [];
+    });
+  }
+
+  private readFile(
+    path: string,
+  ): ResultAsync<{ content: string; sha: string }, AppError> {
+    return this.request(
+      this.octokit.rest.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path,
+        ref: this.branch,
+      }),
+      `Failed to read ${path}`,
+    ).andThen((response) => {
+      if (Array.isArray(response.data) || response.data.type !== "file") {
+        return err(AppError.notFound(`Expected file at ${path}`));
+      }
+      const sha = response.data.sha;
+      const content = response.data.content
+        ? Buffer.from(response.data.content, "base64").toString("utf8")
+        : "";
+      return ok({ content, sha });
+    });
+  }
+
+  private writeFile(args: {
+    path: string;
+    content: string;
+    message: string;
+    sha?: string;
+  }): ResultAsync<{ contentSha: string; commitSha: string }, AppError> {
+    return this.request(
+      this.octokit.rest.repos.createOrUpdateFileContents({
+        owner: this.owner,
+        repo: this.repo,
+        path: args.path,
+        message: args.message,
+        content: Buffer.from(args.content, "utf8").toString("base64"),
+        sha: args.sha,
+        branch: this.branch,
+      }),
+      `Failed to write ${args.path}`,
+    ).andThen((response) => {
+      if (!response.data.content?.sha || !response.data.commit?.sha) {
+        return err(
+          new AppError({
+            code: "INTERNAL",
+            message: `Failed to write ${args.path}`,
+            tag: "FETCH",
+            expose: false,
+          }),
+        );
+      }
+      return ok({
+        contentSha: response.data.content.sha,
+        commitSha: response.data.commit.sha,
+      });
+    });
+  }
+
+  private deleteFile(args: {
+    path: string;
+    sha: string;
+    message: string;
+  }): ResultAsync<{ commitSha: string }, AppError> {
+    return this.request(
+      this.octokit.rest.repos.deleteFile({
+        owner: this.owner,
+        repo: this.repo,
+        path: args.path,
+        message: args.message,
+        sha: args.sha,
+        branch: this.branch,
+      }),
+      `Failed to delete ${args.path}`,
+    ).andThen((response) => {
+      if (!response.data.commit?.sha) {
+        return err(
+          new AppError({
+            code: "INTERNAL",
+            message: `Failed to delete ${args.path}`,
+            tag: "FETCH",
+            expose: false,
+          }),
+        );
+      }
+      return ok({ commitSha: response.data.commit.sha });
+    });
+  }
+
 }

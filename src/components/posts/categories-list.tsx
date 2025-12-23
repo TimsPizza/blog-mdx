@@ -1,7 +1,10 @@
 import { getAllCategories, type Category } from "@/lib/api";
 
 export async function CategoriesList() {
-  const categories = await getAllCategories();
+  const categories = await getAllCategories().match(
+    (items) => items,
+    () => [],
+  );
 
   return (
     <>

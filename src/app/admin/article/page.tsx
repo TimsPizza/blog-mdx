@@ -5,11 +5,14 @@ import { listDocuments } from "@/lib/server/content-store";
 import { mapDocToPost } from "@/lib/server/posts";
 
 export default async function AdminArticlePage() {
-  const docs = await listDocuments();
+  const docs = await listDocuments().match(
+    (items) => items,
+    () => [],
+  );
   const items: ArticleListItem[] = docs.map((doc) => {
     const post = mapDocToPost(doc);
     return {
-      slug: post.slug,
+      slug: post.path,
       title: post.title,
       excerpt: post.excerpt,
       date: post.date,

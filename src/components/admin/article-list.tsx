@@ -28,7 +28,6 @@ export default function ArticleAdminClient({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [draftSlug, setDraftSlug] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -97,12 +96,8 @@ export default function ArticleAdminClient({
     }
   };
 
-  const handleCreate = () => {
-    if (!draftSlug.trim()) return;
-    const slug = draftSlug.trim();
-    setDialogOpen(false);
-    setDraftSlug("");
-    router.push(`/admin/article/edit/${encodeURIComponent(slug)}`);
+  const handleDraftClick = () => {
+    router.push(`/admin/article/new`);
   };
 
   return (
@@ -110,8 +105,8 @@ export default function ArticleAdminClient({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">文章管理</h1>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setDialogOpen(true)}>
-            Draft（新建）
+          <Button variant="secondary" onClick={handleDraftClick}>
+            Draft
           </Button>
           <Button
             variant="outline"
@@ -189,28 +184,6 @@ export default function ArticleAdminClient({
           )}
         </div>
       </div>
-
-      {dialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-background w-full max-w-md rounded-lg p-6 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold">新建草稿</h2>
-            <Input
-              autoFocus
-              placeholder="例如 posts/hello-world.mdx"
-              value={draftSlug}
-              onChange={(e) => setDraftSlug(e.target.value)}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCreate} disabled={!draftSlug.trim()}>
-                确认
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { type MdxDocument } from "@/lib/api/types";
 
 export interface PostSummary {
-  slug: string;
+  path: string; // path without .mdx extension
   title: string;
   excerpt: string;
   date: string;
@@ -16,24 +16,20 @@ export interface PostDetail extends PostSummary {
 }
 
 export function mapDocToPost(doc: MdxDocument): PostDetail {
-  const slug = stripMdxExtension(doc.slug);
-  const title = stringValue(doc.meta.title) ?? slug;
-  const summary =
-    stringValue(doc.meta.summary) ??
-    stringValue(doc.meta.description) ??
-    doc.content.slice(0, 200);
+  const path = stripMdxExtension(doc.path);
+  const title = stringValue(doc.meta.title) ?? path;
+  const summary = stringValue(doc.meta.summary) ?? doc.content.slice(0, 200);
   const tagList = toStringArray(doc.meta.tags);
-  const categorySlugs = toStringArray(doc.meta.categories ?? tagList);
-  const cover =
-    stringValue(doc.meta.coverImageId) ?? stringValue(doc.meta.cover) ?? null;
+  const categoryFromPath = path.includes("/") ? path.split("/")[0] : undefined;
+  const categorySlugs = categoryFromPath ? [categoryFromPath] : undefined;
+  const cover = stringValue(doc.meta.coverImageUrl) ?? null;
 
   return {
-    slug,
+    path,
     title,
     excerpt: summary ?? "",
     date:
-      stringValue(doc.meta.date) ??
-      stringValue(doc.meta.publishedAt) ??
+      timestampToIso(doc.meta.createdAt ?? doc.meta.updatedAt) ??
       new Date().toISOString(),
     tags: tagList,
     categories: categorySlugs,
@@ -66,4 +62,9 @@ function toStringArray(value: unknown): string[] | undefined {
     return arr.length ? arr : undefined;
   }
   return undefined;
+}
+
+function timestampToIso(value: number | undefined): string | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return new Date(value * 1000).toISOString();
 }

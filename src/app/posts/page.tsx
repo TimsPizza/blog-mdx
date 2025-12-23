@@ -33,7 +33,10 @@ export default async function PostsPage({
   const category = searchParams?.category;
   const sort = searchParams?.sort || "date";
 
-  const categories = await getAllCategories();
+  const categories = await getAllCategories().match(
+    (items) => items,
+    () => [],
+  );
 
   const queryParams = (() => {
     if (!search && !category) return undefined;
@@ -57,18 +60,23 @@ export default async function PostsPage({
     return Object.keys(params).length > 0 ? params : undefined;
   })();
 
-  const allPosts = await getAllPosts(queryParams).then(async (posts) =>
-    Promise.all(
-      posts.map(async (post) => {
-        const media = post.featured_media
-          ? await getFeaturedMediaById(post.featured_media)
-          : null;
-        if (media) {
-          (post as ExtendedPost)._media = media;
-        }
-        return post as ExtendedPost;
-      }),
-    ),
+  const basePosts = await getAllPosts(queryParams).match(
+    (items) => items,
+    () => [],
+  );
+  const allPosts = await Promise.all(
+    basePosts.map(async (post) => {
+      const media = post.featured_media
+        ? await getFeaturedMediaById(post.featured_media).match(
+            (value) => value,
+            () => null,
+          )
+        : null;
+      if (media) {
+        (post as ExtendedPost)._media = media;
+      }
+      return post as ExtendedPost;
+    }),
   );
 
   const sortedPosts = [...allPosts].sort((a, b) => {
