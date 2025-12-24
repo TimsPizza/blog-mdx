@@ -92,10 +92,12 @@ export function ArticleEditor({
   const { drafts, setDraft, clearDraft } = useArticleDraftStore();
   const [initialTimestamp] = useState(() => nowSeconds());
   const basePath = initialDoc?.path ?? "";
-  const { category: baseCategory, fileStem: baseFileStem } = useMemo(
+  const { category: baseCategoryFromPath, fileStem: baseFileStem } = useMemo(
     () => parsePathParts(basePath),
     [basePath],
   );
+  const baseCategory =
+    initialDoc?.meta.originalCategory ?? baseCategoryFromPath;
 
   const baseTitle = initialDoc?.meta.title?.trim() || baseFileStem;
   const baseSummary = initialDoc?.meta.summary ?? "";
@@ -241,14 +243,15 @@ export function ArticleEditor({
       tags: preservedMeta.tags?.length ? preservedMeta.tags : undefined,
       coverImageUrl: preservedMeta.coverImageUrl || undefined,
       status: preservedMeta.status ?? "draft",
+      originalCategory: normalizeCategory(category),
       uid: uidRef.current,
       createdAt: createdAtRef.current || now,
       updatedAt: now,
     };
 
-    const requestSlug = stripMdxExtension(nextPath).split("/").pop() ?? "doc";
+    const requestSlug = stripMdxExtension(nextPath);
     const response = await fetch(
-      `/api/articles/${encodeURIComponent(requestSlug)}`,
+      `/api/articles/${encodeURI(requestSlug)}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

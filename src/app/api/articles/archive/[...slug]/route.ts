@@ -7,9 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string[] }> },
 ) {
   const { slug } = await params;
+  const slugPath = Array.isArray(slug) ? slug.join("/") : slug;
   return requireAdminResult()
     .andThen(() =>
       ResultAsync.fromPromise(
@@ -24,12 +25,12 @@ export async function POST(
         const message =
           body.message && typeof body.message === "string"
             ? body.message
-            : `chore: archive ${slug}`;
+            : `chore: archive ${slugPath}`;
 
         return getContentStore().match(
           (store) =>
             store.archiveDoc({
-              path: path ?? `${slug}.mdx`,
+              path: path ?? `${slugPath}.mdx`,
               expectedSha,
               message,
             }),

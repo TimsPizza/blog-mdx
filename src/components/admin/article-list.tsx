@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 export type ArticleListItem = {
-  slug: string;
+  path: string;
   title: string;
   excerpt: string;
   date: string;
@@ -28,7 +28,6 @@ export default function ArticleAdminClient({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("");
-  const [draftSlug, setDraftSlug] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   const filtered = useMemo(() => {
@@ -36,17 +35,17 @@ export default function ArticleAdminClient({
     const q = filter.toLowerCase();
     return articles.filter(
       (a) =>
-        a.slug.toLowerCase().includes(q) ||
+        a.path.toLowerCase().includes(q) ||
         a.title.toLowerCase().includes(q) ||
         (a.tags ?? []).some((t) => t.toLowerCase().includes(q)),
     );
   }, [articles, filter]);
 
-  const toggleSelect = (slug: string) => {
+  const toggleSelect = (articleFullPath: string) => {
     setSelected((current) => {
       const next = new Set(current);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
+      if (next.has(articleFullPath)) next.delete(articleFullPath);
+      else next.add(articleFullPath);
       return next;
     });
   };
@@ -55,7 +54,7 @@ export default function ArticleAdminClient({
   const toggleSelectAll = () => {
     setSelected(() => {
       if (allSelected) return new Set();
-      return new Set(filtered.map((a) => a.slug));
+      return new Set(filtered.map((a) => a.path));
     });
   };
 
@@ -80,7 +79,7 @@ export default function ArticleAdminClient({
     try {
       await Promise.all(
         Array.from(selected).map((slug) =>
-          fetch(`/api/articles/${encodeURIComponent(slug)}/${op}`, {
+          fetch(`/api/articles/${op}/${encodeURI(slug)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: `chore: ${op} ${slug}` }),
@@ -94,6 +93,39 @@ export default function ArticleAdminClient({
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const runBulkDelete = async () => {
+    if (selected.size === 0) return;
+    const confirmed = window.confirm(
+      `确认删除 ${selected.size} 篇文章？此操作不可恢复。`,
+    );
+    if (!confirmed) return;
+    setActionLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selected).map((slug) =>
+          fetch(`/api/articles/${encodeURI(slug)}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              path: `${slug}.mdx`,
+              message: `chore: delete ${slug}`,
+            }),
+          }),
+        ),
+      );
+      setSelected(new Set());
+      await refreshList();
+    } catch (err) {
+      console.error("Bulk delete failed", err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleEditClick = (path: string) => {
+    router.push(`/admin/article/edit/${encodeURI(path)}`);
   };
 
   const handleDraftClick = () => {
@@ -121,6 +153,13 @@ export default function ArticleAdminClient({
             onClick={() => runBulk("unarchive")}
           >
             Unarchive
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={selected.size === 0 || actionLoading}
+            onClick={runBulkDelete}
+          >
+            Delete
           </Button>
         </div>
       </div>
@@ -151,18 +190,22 @@ export default function ArticleAdminClient({
         <div className="divide-y">
           {filtered.map((item) => (
             <div
-              key={item.slug}
+              key={item.path}
               className="grid grid-cols-[auto,1fr,auto,auto] items-center gap-4 px-4 py-3"
             >
               <Checkbox
-                checked={selected.has(item.slug)}
-                onChange={() => toggleSelect(item.slug)}
+                checked={selected.has(item.path)}
+                onChange={() => toggleSelect(item.path)}
               />
               <div className="space-y-1">
-                <div className="text-foreground text-sm font-medium">
-                  {item.title || item.slug}
-                </div>
-                <div className="text-muted-foreground text-xs">{item.slug}</div>
+                <button
+                  type="button"
+                  onClick={() => handleEditClick(item.path)}
+                  className="text-foreground text-left text-sm font-medium hover:underline"
+                >
+                  {item.title || item.path}
+                </button>
+                <div className="text-muted-foreground text-xs">{item.path}</div>
                 {item.tags && item.tags.length > 0 && (
                   <div className="text-muted-foreground text-xs">
                     Tags: {item.tags.join(", ")}

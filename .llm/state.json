@@ -1,11 +1,8 @@
 {
-  "completed_task_counter": 56,
-  "last_snapshot_commit": "c4c4c370b85a072cab285f512c3f7078649c8442",
-  "last_impl_index": 18,
-  "last_impl_time": "2025-12-23T22:00:16Z",
+  "completed_task_counter": 60,
+  "last_snapshot_commit": "6fc62fe3b40ef56197470b624147d65e33800411",
+  "last_impl_index": 20,
+  "last_impl_time": "2025-12-24T00:26:37Z",
   "pending_tasks": [],
-  "done_tasks_since_last_impl": [
-    "Align session schema to snake_case and return auth to Drizzle",
-    "Adopt neverthrow/AppError flow for server data paths and API boundaries"
-  ]
+  "done_tasks_since_last_impl": []
 }

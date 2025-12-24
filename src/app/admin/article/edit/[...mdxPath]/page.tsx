@@ -5,20 +5,21 @@ import { errAsync } from "neverthrow";
 export default async function ArticleEditPage({
   params,
 }: {
-  params: { slug: string[] }; // e.g., ["category", "my-first-article"]
+  params: Promise<{ mdxPath: string[] }>; // e.g., ["category", "my-first-article"]
 }) {
-  const slugPath = params.slug?.join("/") ?? "";
-  if (!slugPath) {
+  const resolvedParams = await params;
+  const origMdxPath = resolvedParams.mdxPath?.join("/") ?? "";
+  if (!origMdxPath) {
     return (
       <div className="p-8">
-        <p className="text-muted-foreground">缺少 slug 参数。</p>
+        <p className="text-muted-foreground">缺少 mdxPath 参数。</p>
       </div>
     );
   }
 
   const doc = await getContentStore()
     .match(
-      (store) => store.getDoc(slugPath),
+      (store) => store.getDoc(origMdxPath),
       (error) => errAsync(error),
     )
     .match(
@@ -37,7 +38,5 @@ export default async function ArticleEditPage({
     );
   }
 
-  return (
-    <ArticleEditor isNewArticle={false} initialDoc={doc} />
-  );
+  return <ArticleEditor isNewArticle={false} initialDoc={doc} />;
 }

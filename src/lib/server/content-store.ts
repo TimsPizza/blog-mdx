@@ -96,3 +96,21 @@ export function listDocsByCategory(
     (error) => errAsync(error),
   );
 }
+
+export function createCategory(
+  category: string,
+): ResultAsync<{ path: string; commitSha?: string }, AppError> {
+  return getContentStore().match(
+    (store) => store.createCategory(category),
+    (error) => errAsync(error),
+  );
+}
+
+export function deleteCategory(
+  category: string,
+): ResultAsync<{ deleted: true; commitSha?: string }, AppError> {
+  return getContentStore().match(
+    (store) => store.deleteCategory(category),
+    (error) => errAsync(error),
+  );
+}

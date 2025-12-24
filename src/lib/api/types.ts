@@ -12,6 +12,7 @@ export interface MdxDocumentMeta {
   summary?: string;
   tags?: string[];
   coverImageUrl?: string;
+  originalCategory?: string;
   status: DocStatus;
   uid: string; // Unique identifier for the document
   createdAt?: number; // Unix timestamp (seconds)

@@ -2,12 +2,12 @@ import { SiteConfig } from "@/types/layout";
 
 // Define the menu items
 export const mainMenu = {
-  categories: "/posts/categories",
+  categories: "/category",
   articles: "/posts",
 };
 
 export const contentMenu = {
-  categories: "/posts/categories",
+  categories: "/category",
   tags: "/posts/tags",
   authors: "/posts/authors",
 };

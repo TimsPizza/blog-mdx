@@ -129,6 +129,7 @@ function normalizeMeta(
     statusRaw === "draft"
       ? statusRaw
       : inferredStatus;
+  const pathCategory = path.split("/")[0];
   return {
     uid,
     status,
@@ -136,6 +137,10 @@ function normalizeMeta(
     summary: stringValue(meta.summary),
     tags: toStringArray(meta.tags),
     coverImageUrl: stringValue(meta.coverImageUrl),
+    originalCategory:
+      stringValue(meta.originalCategory) ??
+      stringValue(meta.category) ??
+      (pathCategory && pathCategory !== "archived" ? pathCategory : undefined),
     createdAt: numberValue(meta.createdAt),
     updatedAt: numberValue(meta.updatedAt),
   };
@@ -303,10 +308,57 @@ export class GitHubContentStore {
     const newPath = this.joinPath(this.docsPath, newCategory, baseName);
     return this.moveDocInternal(resolvedPath, newPath, {
       message: `chore: move ${this.toDocPath(resolvedPath)} to ${newCategory}`,
+      transform: (content) => {
+        const { meta, body } = parseFrontmatter(content);
+        const nextMeta = { ...meta, originalCategory: newCategory };
+        return applyFrontmatter(body, nextMeta);
+      },
     }).map((result) => ({
       path: this.toDocPath(newPath),
       commitSha: result.commitSha,
     }));
+  }
+
+  createCategory(
+    category: string,
+  ): ResultAsync<{ path: string; commitSha?: string }, AppError> {
+    const keepPath = this.joinPath(this.docsPath, category, ".keep");
+    return this.readFile(keepPath)
+      .map(() => ({ path: this.toDocPath(keepPath) }))
+      .orElse((error) => {
+        if (error.code === "NOT_FOUND") {
+          return this.writeFile({
+            path: keepPath,
+            content: "",
+            message: `chore: create category ${category}`,
+          }).map((result) => ({
+            path: this.toDocPath(keepPath),
+            commitSha: result.commitSha,
+          }));
+        }
+        return err(error);
+      });
+  }
+
+  deleteCategory(
+    category: string,
+  ): ResultAsync<{ deleted: true; commitSha?: string }, AppError> {
+    const keepPath = this.joinPath(this.docsPath, category, ".keep");
+    return this.readFile(keepPath)
+      .andThen((file) =>
+        this.deleteFile({
+          path: keepPath,
+          sha: file.sha,
+          message: `chore: delete category ${category}`,
+        }),
+      )
+      .map((result) => ({ deleted: true as const, commitSha: result.commitSha }))
+      .orElse((error) => {
+        if (error.code === "NOT_FOUND") {
+          return ok({ deleted: true as const });
+        }
+        return err(error);
+      });
   }
 
   archiveDoc(
@@ -379,11 +431,14 @@ export class GitHubContentStore {
       const baseName = resolvedPath.split("/").pop() ?? resolvedPath;
       return this.readFile(resolvedPath).andThen((existing) => {
         const { meta } = parseFrontmatter(existing.content);
-        const category =
-          typeof meta.category === "string" && meta.category.trim()
-            ? meta.category.trim()
-            : "drafts";
-        const nextPath = this.joinPath(this.docsPath, category, baseName);
+        const originalCategory =
+          typeof meta.originalCategory === "string" &&
+          meta.originalCategory.trim()
+            ? meta.originalCategory.trim()
+            : typeof meta.category === "string" && meta.category.trim()
+              ? meta.category.trim()
+              : "drafts";
+        const nextPath = this.joinPath(this.docsPath, originalCategory, baseName);
         return this.moveDocInternal(resolvedPath, nextPath, {
           message:
             request.message ??

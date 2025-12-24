@@ -12,7 +12,7 @@ export default async function AdminArticlePage() {
   const items: ArticleListItem[] = docs.map((doc) => {
     const post = mapDocToPost(doc);
     return {
-      slug: post.path,
+      path: post.path,
       title: post.title,
       excerpt: post.excerpt,
       date: post.date,

@@ -9,9 +9,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string[] }> },
 ) {
   const { slug } = await params;
+  const slugPath = Array.isArray(slug) ? slug.join("/") : slug;
+  const slugKey = slugPath.replace(/\.mdx?$/, "");
   const url = new URL(_request.url);
   const pathParam = url.searchParams.get("path");
   const docResult = pathParam
@@ -21,7 +23,7 @@ export async function GET(
       )
     : listDocuments().andThen((docs) => {
         const doc = docs.find(
-          (item) => item.path.replace(/\.mdx?$/, "") === slug,
+          (item) => item.path.replace(/\.mdx?$/, "") === slugKey,
         );
         if (!doc) {
           return err(AppError.notFound("Not found"));
@@ -34,7 +36,7 @@ export async function GET(
     .andThen((doc) => {
       const post = mapDocToPost(doc);
       return viewsRepo
-        .increment(slug)
+        .increment(slugKey)
         .orElse(() => okAsync(null))
         .map((views) => ({
           post,
@@ -50,9 +52,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string[] }> },
 ) {
   const { slug } = await params;
+  const slugPath = Array.isArray(slug) ? slug.join("/") : slug;
   return requireAdminResult()
     .andThen(() =>
       ResultAsync.fromPromise(
@@ -69,12 +72,12 @@ export async function PUT(
         const message =
           body.message && typeof body.message === "string"
             ? body.message
-            : `chore: update ${slug}`;
+            : `chore: update ${slugPath}`;
 
         return getContentStore().match(
           (store) =>
             store.upsertDoc({
-              path: path ?? `${slug}.mdx`,
+              path: path ?? `${slugPath}.mdx`,
               content,
               meta,
               sha,
@@ -96,9 +99,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string[] }> },
 ) {
   const { slug } = await params;
+  const slugPath = Array.isArray(slug) ? slug.join("/") : slug;
   return requireAdminResult()
     .andThen(() =>
       ResultAsync.fromPromise(
@@ -113,12 +117,12 @@ export async function DELETE(
         const message =
           body.message && typeof body.message === "string"
             ? body.message
-            : `chore: delete ${slug}`;
+            : `chore: delete ${slugPath}`;
 
         return getContentStore().match(
           (store) =>
             store.deleteDoc({
-              path: path ?? `${slug}.mdx`,
+              path: path ?? `${slugPath}.mdx`,
               sha,
               message,
             }),

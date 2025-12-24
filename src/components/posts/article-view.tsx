@@ -1,3 +1,4 @@
+"use client";
 import { MdxRendered } from "@/components/mdx/mdx-renderer";
 import { type Post } from "@/lib/api";
 import { ArticleViewClient } from "./article-view-client";
