@@ -1,9 +1,9 @@
 "use client";
 
+import { extractHeadingsFromMdx } from "@/components/mdx/heading-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
-import { extractHeadingsFromMdx } from "@/components/mdx/heading-utils";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface Heading {
@@ -113,7 +113,7 @@ export function TableOfContents({
         <h4 className="text-sm font-medium">Table of Contents</h4>
       </div>
       <ScrollArea className="h-[calc(100vh-16rem)]">
-        <nav className="p-4">
+        <nav className="flex flex-col items-start justify-center gap-1 p-4">
           {headings.map((heading) => (
             <a
               key={heading.id}
@@ -131,8 +131,9 @@ export function TableOfContents({
               )}
             >
               <div className="flex flex-row items-start justify-center">
-                <span className="h-full min-w-6">{`${extractNumber(heading.text)}.`}</span>
-                <span className="ml-1">{extractText(heading.text)}</span>
+                {/* <span className="h-full min-w-6">{`${extractNumber(heading.text)}.`}</span> */}
+                <span className="h-full min-w-6 text-center">{`-`}</span>
+                <span className="ml-0.5">{extractText(heading.text)}</span>
               </div>
             </a>
           ))}

@@ -58,6 +58,7 @@ export default function RootLayout({
           lxgw.variable,
           nunito.variable,
         )}
+        cz-shortcut-listen="true"
       >
         <ThemeProvider
           attribute="class"

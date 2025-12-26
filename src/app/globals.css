@@ -170,7 +170,7 @@
     }
 
     img {
-      @apply mx-auto my-8;
+      @apply mx-auto;
     }
   }
 

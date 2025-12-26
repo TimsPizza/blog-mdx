@@ -1,11 +1,12 @@
 {
-  "completed_task_counter": 77,
+  "completed_task_counter": 78,
   "last_snapshot_commit": "6fa2f91e292dc3c5f72a1ad661b5ffbd9b712cde",
   "last_impl_index": 24,
   "last_impl_time": "2025-12-26T21:23:35Z",
   "pending_tasks": [],
   "done_tasks_since_last_impl": [
     "Add JSX insert control to the MDX editor toolbar",
-    "Add Shiki-based code block rendering for MDX"
+    "Add Shiki-based code block rendering for MDX",
+    "Fix JSX insert component typing in MDX editor"
   ]
 }

@@ -44,21 +44,21 @@ type InsertableComponent = {
   defaultProps?: Record<string, unknown>;
 };
 
-const INSERTABLE_COMPONENTS: InsertableComponent[] = Object.values(
-  MDX_COMPONENT_REGISTRY,
-)
-  .map((definition) => {
+const INSERTABLE_COMPONENTS = Object.values(MDX_COMPONENT_REGISTRY).flatMap(
+  (definition): InsertableComponent[] => {
     const name = definition.descriptor.name ?? definition.id;
-    if (!name) return null;
-    return {
-      name,
-      label: definition.label,
-      kind: definition.descriptor.kind,
-      descriptor: definition.descriptor,
-      defaultProps: definition.defaultProps,
-    };
-  })
-  .filter((entry): entry is InsertableComponent => Boolean(entry));
+    if (!name) return [];
+    return [
+      {
+        name,
+        label: definition.label,
+        kind: definition.descriptor.kind,
+        descriptor: definition.descriptor,
+        defaultProps: definition.defaultProps,
+      },
+    ];
+  },
+);
 
 const buildJsxProps = (entry: InsertableComponent): JsxProperties => {
   const defaults = entry.defaultProps;

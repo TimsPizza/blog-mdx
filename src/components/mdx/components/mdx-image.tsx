@@ -60,9 +60,11 @@ export const MdxImage: FC<MdxImageProps> = (props) => {
       <Image
         src={src}
         alt={alt ?? ""}
-        className="h-auto w-full rounded-lg object-cover"
+        width={400}
+        height={300}
+        className="rounded-lg object-contain"
         loading="lazy"
-        {...sizeProps}
+        // {...sizeProps}
       />
       {caption ? (
         <figcaption className="text-muted-foreground text-center text-sm">
