@@ -1,9 +1,8 @@
-"use client";
+import { MdxRendered } from "@/components/mdx/mdx-renderer";
 import { type Post } from "@/lib/api";
-import type { ReactNode } from "react";
-import { ArticleViewClient } from "./article-view-client";
+import { ArticleView } from "./article-view";
 
-interface ArticleProps {
+interface ArticleViewServerProps {
   post: Post;
   author?: {
     name: string;
@@ -14,25 +13,22 @@ interface ArticleProps {
   media?: {
     source_url: string;
   } | null;
-  children: ReactNode;
 }
 
-export function ArticleView({
+export function ArticleViewServer({
   post,
   author,
   category,
   media,
-  children,
-}: ArticleProps) {
+}: ArticleViewServerProps) {
   return (
-    <ArticleViewClient
+    <ArticleView
       post={post}
       author={author}
       category={category}
       media={media}
-      contentSource={post.content.mdx}
     >
-      {children}
-    </ArticleViewClient>
+      <MdxRendered mdxSourceString={post.content.mdx} />
+    </ArticleView>
   );
 }

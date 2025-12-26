@@ -1,11 +1,13 @@
 "use client";
 import { mdxPropsValidator } from "@/components/mdx/prop-validate";
-import type { MdxComponentDefinition } from "@/components/mdx/types";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import Image from "next/image";
 import type { FC } from "react";
-export const IMAGE_GRID_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
+
+export const IMAGE_GRID_COMPONENT_DESCRIPTOR: Omit<
+  JsxComponentDescriptor,
+  "Editor"
+> = {
   name: "ImageGrid",
   kind: "flow",
   props: [
@@ -23,7 +25,6 @@ export const IMAGE_GRID_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
   hasChildren: false,
   source: "@/components/mdx/components/image-grid",
   defaultExport: true,
-  Editor: GenericJsxEditor,
 };
 
 export interface ImageGridProps {
@@ -31,7 +32,7 @@ export interface ImageGridProps {
   columns: number;
 }
 
-const ImageGridLayout: FC<ImageGridProps> = (props) => {
+export const ImageGridLayout: FC<ImageGridProps> = (props) => {
   const result = mdxPropsValidator(IMAGE_GRID_COMPONENT_DESCRIPTOR, props);
   if (!result.isValid) return result.errJsx;
   const imgUrls = Array.isArray(props.img_urls) ? props.img_urls : [];
@@ -57,25 +58,6 @@ const ImageGridLayout: FC<ImageGridProps> = (props) => {
       ))}
     </div>
   );
-};
-
-export const ImageGridDefinition: MdxComponentDefinition<ImageGridProps> = {
-  id: "ImageGrid",
-  label: "图片网格",
-  category: "media",
-  descriptor: IMAGE_GRID_COMPONENT_DESCRIPTOR,
-  Renderer: ImageGridLayout,
-  defaultProps: {
-    columns: 3,
-    img_urls: [],
-  },
-  normalizeProps: (input: Record<string, unknown>) => {
-    const img_urls = Array.isArray(input.img_urls)
-      ? (input.img_urls as string[])
-      : [];
-    const columns = Number(input.columns) || 3;
-    return { img_urls, columns };
-  },
 };
 
 export default ImageGridLayout;

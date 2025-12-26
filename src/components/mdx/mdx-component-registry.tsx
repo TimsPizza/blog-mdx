@@ -1,12 +1,14 @@
-import { AudioPlayerDefinition } from "@/components/mdx/components/audio-player";
-import { ImageGridDefinition } from "@/components/mdx/components/image-grid";
-import { ImageDefinition } from "@/components/mdx/components/mdx-image";
-import { TableDefinition } from "@/components/mdx/components/mdx-table";
-import { VideoPlayerDefinition } from "@/components/mdx/components/video-player";
+"use client";
+
+import { AudioPlayerDefinition } from "@/components/mdx/components/audio-player-definition";
+import { ImageGridDefinition } from "@/components/mdx/components/image-grid-definition";
+import { ImageDefinition } from "@/components/mdx/components/mdx-image-definition";
+import { TableDefinition } from "@/components/mdx/components/mdx-table-definition";
+import { VideoPlayerDefinition } from "@/components/mdx/components/video-player-definition";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
 
 /**
- * Registry of all custom MDX components for both editor and renderer.
+ * Registry of all custom MDX components for the editor.
  * Add new components here and export helpers for MDXEditor integration.
  */
 export const MDX_COMPONENT_REGISTRY = {
@@ -24,7 +26,3 @@ const registryEntries: RegistryEntry[] = Object.values(MDX_COMPONENT_REGISTRY);
 
 export const AVAILABLE_MDX_COMPONENTS: JsxComponentDescriptor[] =
   registryEntries.map((entry) => entry.descriptor);
-
-export const mdxComponentRenderers = Object.fromEntries(
-  registryEntries.map((entry) => [entry.id, entry.Renderer]),
-) as Record<string, RegistryEntry["Renderer"]>;

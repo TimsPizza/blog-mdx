@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +10,6 @@ import {
   useArticleDraftStore,
 } from "@/lib/stores/article-draft";
 import "@mdxeditor/editor/style.css";
-import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const MDXEditor = dynamic(
@@ -250,20 +250,17 @@ export function ArticleEditor({
     };
 
     const requestSlug = stripMdxExtension(nextPath);
-    const response = await fetch(
-      `/api/articles/${encodeURI(requestSlug)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          path: nextPath,
-          content,
-          meta,
-          sha: sha || undefined,
-          message: `chore: upsert ${nextPath}`,
-        }),
-      },
-    );
+    const response = await fetch(`/api/articles/${encodeURI(requestSlug)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: nextPath,
+        content,
+        meta,
+        sha: sha || undefined,
+        message: `chore: upsert ${nextPath}`,
+      }),
+    });
 
     if (!response.ok) {
       const text = await response.text();

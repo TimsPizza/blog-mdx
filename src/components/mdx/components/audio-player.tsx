@@ -1,18 +1,13 @@
 "use client";
 
 import { mdxPropsValidator } from "@/components/mdx/prop-validate";
-import type { MdxComponentDefinition } from "@/components/mdx/types";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { FC } from "react";
 
-const coerceBoolean = (value: unknown, fallback: boolean) => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") return value === "true";
-  return fallback;
-};
-
-export const AUDIO_PLAYER_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
+export const AUDIO_PLAYER_COMPONENT_DESCRIPTOR: Omit<
+  JsxComponentDescriptor,
+  "Editor"
+> = {
   name: "AudioPlayer",
   kind: "flow",
   props: [
@@ -41,7 +36,6 @@ export const AUDIO_PLAYER_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
   hasChildren: false,
   source: "@/components/mdx/components/audio-player",
   defaultExport: true,
-  Editor: GenericJsxEditor,
 };
 
 export interface AudioPlayerProps {
@@ -52,7 +46,7 @@ export interface AudioPlayerProps {
   controls?: boolean;
 }
 
-const AudioPlayer: FC<AudioPlayerProps> = (props) => {
+export const AudioPlayer: FC<AudioPlayerProps> = (props) => {
   const result = mdxPropsValidator(AUDIO_PLAYER_COMPONENT_DESCRIPTOR, props);
   if (!result.isValid) return result.errJsx;
   const { src, title, autoPlay, loop, controls } = props;
@@ -69,28 +63,6 @@ const AudioPlayer: FC<AudioPlayerProps> = (props) => {
       />
     </div>
   );
-};
-
-export const AudioPlayerDefinition: MdxComponentDefinition<AudioPlayerProps> = {
-  id: "AudioPlayer",
-  label: "音频播放器",
-  category: "media",
-  descriptor: AUDIO_PLAYER_COMPONENT_DESCRIPTOR,
-  Renderer: AudioPlayer,
-  defaultProps: {
-    controls: true,
-  },
-  normalizeProps: (input: Record<string, unknown>) => {
-    const src = typeof input.src === "string" ? input.src : "";
-    const title = typeof input.title === "string" ? input.title : "";
-    return {
-      src,
-      title,
-      autoPlay: coerceBoolean(input.autoPlay, false),
-      loop: coerceBoolean(input.loop, false),
-      controls: coerceBoolean(input.controls, true),
-    };
-  },
 };
 
 export default AudioPlayer;

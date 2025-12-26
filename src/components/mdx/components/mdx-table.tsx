@@ -1,29 +1,9 @@
 "use client";
 import { mdxPropsValidator } from "@/components/mdx/prop-validate";
-import type { MdxComponentDefinition } from "@/components/mdx/types";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { FC } from "react";
 
 type TableCellValue = string | number;
-
-const normalizeStringArray = (value: unknown) =>
-  Array.isArray(value) ? value.map((item) => String(item)) : [];
-
-const normalizeRows = (value: unknown) => {
-  if (!Array.isArray(value)) return [];
-  return value.map((row) =>
-    Array.isArray(row) ? row.map((cell) => String(cell)) : [],
-  );
-};
-
-const normalizeAlign = (value: unknown) => {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => {
-    if (item === "center" || item === "right") return item;
-    return "left";
-  });
-};
 
 const alignmentClass = (alignment: "left" | "center" | "right") => {
   switch (alignment) {
@@ -36,7 +16,10 @@ const alignmentClass = (alignment: "left" | "center" | "right") => {
   }
 };
 
-export const TABLE_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
+export const TABLE_COMPONENT_DESCRIPTOR: Omit<
+  JsxComponentDescriptor,
+  "Editor"
+> = {
   name: "Table",
   kind: "flow",
   props: [
@@ -62,7 +45,6 @@ export const TABLE_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
   hasChildren: false,
   source: "@/components/mdx/components/mdx-table",
   defaultExport: true,
-  Editor: GenericJsxEditor,
 };
 
 export interface MdxTableProps {
@@ -72,7 +54,7 @@ export interface MdxTableProps {
   align?: Array<"left" | "center" | "right">;
 }
 
-const MdxTable: FC<MdxTableProps> = (props) => {
+export const MdxTable: FC<MdxTableProps> = (props) => {
   const result = mdxPropsValidator(TABLE_COMPONENT_DESCRIPTOR, props);
   if (!result.isValid) return result.errJsx;
   const headers = Array.isArray(props.headers) ? props.headers : [];
@@ -130,28 +112,6 @@ const MdxTable: FC<MdxTableProps> = (props) => {
       </table>
     </div>
   );
-};
-
-export const TableDefinition: MdxComponentDefinition<MdxTableProps> = {
-  id: "Table",
-  label: "表格",
-  category: "data",
-  descriptor: TABLE_COMPONENT_DESCRIPTOR,
-  Renderer: MdxTable,
-  defaultProps: {
-    headers: ["Column 1", "Column 2"],
-    rows: [
-      ["Row 1", "Value 1"],
-      ["Row 2", "Value 2"],
-    ],
-  },
-  normalizeProps: (input: Record<string, unknown>) => {
-    const headers = normalizeStringArray(input.headers);
-    const rows = normalizeRows(input.rows);
-    const caption = typeof input.caption === "string" ? input.caption : "";
-    const align = normalizeAlign(input.align);
-    return { headers, rows, caption, align };
-  },
 };
 
 export default MdxTable;

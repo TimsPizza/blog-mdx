@@ -1,11 +1,5 @@
-'use client";';
-import { JsxComponentDescriptor } from "@mdxeditor/editor";
+import type { JsxComponentDescriptor } from "@mdxeditor/editor";
 import { JSX } from "react";
-
-interface MdxPropsValidatorProps {
-  mdxComponentDescriptor: JsxComponentDescriptor;
-  propsInput: Record<string, unknown>;
-}
 
 interface MdxPropsValidatorReturn {
   isValid: boolean;
@@ -13,7 +7,7 @@ interface MdxPropsValidatorReturn {
 }
 
 export const mdxPropsValidator = <Props extends object>(
-  mdxComponentDescriptor: JsxComponentDescriptor,
+  mdxComponentDescriptor: Omit<JsxComponentDescriptor, "Editor">,
   propsInput: Props,
 ): MdxPropsValidatorReturn => {
   const ks = Object.keys(propsInput);

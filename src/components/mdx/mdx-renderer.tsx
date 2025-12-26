@@ -1,8 +1,8 @@
-import { mdxComponentRenderers } from "@/components/mdx/mdx-component-registry";
 import {
   generateHeadingId,
   stripMarkdown,
 } from "@/components/mdx/heading-utils";
+import { mdxComponentRenderers } from "@/components/mdx/mdx-renderer-registry";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import type { ReactNode } from "react";
 import { isValidElement } from "react";

@@ -1,4 +1,4 @@
-import { ArticleView } from "@/components/posts/article-view";
+import { ArticleViewServer } from "@/components/posts/article-view-server";
 import {
   getAllPosts,
   getCategoryById,
@@ -39,6 +39,6 @@ export default async function PostPage({
     : null;
 
   return (
-    <ArticleView post={post} category={category} media={media} />
+    <ArticleViewServer post={post} category={category} media={media} />
   );
 }

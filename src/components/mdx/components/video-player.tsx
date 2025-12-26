@@ -1,16 +1,13 @@
+"use client";
+
 import { mdxPropsValidator } from "@/components/mdx/prop-validate";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
 import type { FC } from "react";
-import type { MdxComponentDefinition } from "@/components/mdx/types";
 
-const coerceBoolean = (value: unknown, fallback: boolean) => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") return value === "true";
-  return fallback;
-};
-
-export const VIDEO_PLAYER_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
+export const VIDEO_PLAYER_COMPONENT_DESCRIPTOR: Omit<
+  JsxComponentDescriptor,
+  "Editor"
+> = {
   name: "VideoPlayer",
   kind: "flow",
   props: [
@@ -47,7 +44,6 @@ export const VIDEO_PLAYER_COMPONENT_DESCRIPTOR: JsxComponentDescriptor = {
   hasChildren: false,
   source: "@/components/mdx/components/video-player",
   defaultExport: true,
-  Editor: GenericJsxEditor,
 };
 
 export interface VideoPlayerProps {
@@ -60,7 +56,7 @@ export interface VideoPlayerProps {
   muted?: boolean;
 }
 
-const VideoPlayer: FC<VideoPlayerProps> = (props) => {
+export const VideoPlayer: FC<VideoPlayerProps> = (props) => {
   const result = mdxPropsValidator(VIDEO_PLAYER_COMPONENT_DESCRIPTOR, props);
   if (!result.isValid) return result.errJsx;
   const { src, title, poster, autoPlay, loop, controls, muted } = props;
@@ -80,31 +76,6 @@ const VideoPlayer: FC<VideoPlayerProps> = (props) => {
       />
     </div>
   );
-};
-
-export const VideoPlayerDefinition: MdxComponentDefinition<VideoPlayerProps> = {
-  id: "VideoPlayer",
-  label: "视频播放器",
-  category: "media",
-  descriptor: VIDEO_PLAYER_COMPONENT_DESCRIPTOR,
-  Renderer: VideoPlayer,
-  defaultProps: {
-    controls: true,
-  },
-  normalizeProps: (input: Record<string, unknown>) => {
-    const src = typeof input.src === "string" ? input.src : "";
-    const title = typeof input.title === "string" ? input.title : "";
-    const poster = typeof input.poster === "string" ? input.poster : "";
-    return {
-      src,
-      title,
-      poster,
-      autoPlay: coerceBoolean(input.autoPlay, false),
-      loop: coerceBoolean(input.loop, false),
-      controls: coerceBoolean(input.controls, true),
-      muted: coerceBoolean(input.muted, false),
-    };
-  },
 };
 
 export default VideoPlayer;

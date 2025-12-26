@@ -1,3 +1,5 @@
+"use client";
+
 import { MDXEditor, jsxPlugin } from "@mdxeditor/editor";
 import { AVAILABLE_MDX_COMPONENTS } from "./mdx-component-registry";
 
