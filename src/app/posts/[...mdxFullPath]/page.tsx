@@ -1,9 +1,5 @@
 import { ArticleViewServer } from "@/components/posts/article-view-server";
-import {
-  getAllPosts,
-  getCategoryById,
-  getFeaturedMediaById,
-} from "@/lib/api";
+import { getAllPosts, getCategoryById, getFeaturedMediaById } from "@/lib/api";
 import { notFound } from "next/navigation";
 
 type PostParams = {
@@ -38,7 +34,5 @@ export default async function PostPage({
       )
     : null;
 
-  return (
-    <ArticleViewServer post={post} category={category} media={media} />
-  );
+  return <ArticleViewServer post={post} category={category} media={media} />;
 }

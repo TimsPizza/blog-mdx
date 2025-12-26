@@ -3,7 +3,7 @@ import {
   stripMarkdown,
 } from "@/components/mdx/heading-utils";
 import { mdxComponentRenderers } from "@/components/mdx/mdx-renderer-registry";
-import { MDXRemote } from "next-mdx-remote/rsc";
+import { compileMDX } from "next-mdx-remote/rsc";
 import type { ReactNode } from "react";
 import { isValidElement } from "react";
 
@@ -39,6 +39,15 @@ const mdxComponents = {
   h3: createHeading("h3"),
 };
 
-export function MdxRendered({ mdxSourceString }: MdxRenderedProps) {
-  return <MDXRemote source={mdxSourceString} components={mdxComponents} />;
+export async function MdxRendered({ mdxSourceString }: MdxRenderedProps) {
+  const { content } = await compileMDX({
+    source: mdxSourceString,
+    components: mdxComponents,
+    options: {
+      mdxOptions: {
+        format: "mdx",
+      },
+    },
+  });
+  return content;
 }

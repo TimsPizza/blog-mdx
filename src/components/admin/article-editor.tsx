@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +8,8 @@ import {
   type ArticleDraft,
   useArticleDraftStore,
 } from "@/lib/stores/article-draft";
-import "@mdxeditor/editor/style.css";
+
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const MDXEditor = dynamic(
@@ -377,22 +377,29 @@ export function ArticleEditor({
           />
         </label>
 
-        <label className="space-y-2">
-          <span className="text-foreground/80 text-sm font-medium">
+        <div className="space-y-2">
+          <span
+            id="mdx-content-label"
+            className="text-foreground/80 text-sm font-medium"
+          >
             MDX 内容
           </span>
-          <div className="bg-background rounded-md border">
+          <div
+            className="bg-background rounded-md border"
+            role="group"
+            aria-labelledby="mdx-content-label"
+          >
             <MDXEditor
               markdown={content}
               onChange={(value: string) => {
                 setContent(value);
                 persistDraft({ content: value });
               }}
-              contentEditableClassName="prose max-w-none min-h-[360px] p-4"
+              contentEditableClassName="reading-prose max-w-none min-h-[360px]"
               placeholder="Start writing MDX..."
             />
           </div>
-        </label>
+        </div>
       </div>
     </div>
   );

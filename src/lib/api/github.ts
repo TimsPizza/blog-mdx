@@ -10,8 +10,8 @@ import {
   type UpsertDocResponse,
 } from "@/lib/api/types";
 import { AppError } from "@/types/error";
-import { Octokit } from "octokit";
 import { err, ok, okAsync, ResultAsync } from "neverthrow";
+import { Octokit } from "octokit";
 
 type GitHubContentStoreConfig = {
   owner: string;
@@ -352,7 +352,10 @@ export class GitHubContentStore {
           message: `chore: delete category ${category}`,
         }),
       )
-      .map((result) => ({ deleted: true as const, commitSha: result.commitSha }))
+      .map((result) => ({
+        deleted: true as const,
+        commitSha: result.commitSha,
+      }))
       .orElse((error) => {
         if (error.code === "NOT_FOUND") {
           return ok({ deleted: true as const });
@@ -438,7 +441,11 @@ export class GitHubContentStore {
             : typeof meta.category === "string" && meta.category.trim()
               ? meta.category.trim()
               : "drafts";
-        const nextPath = this.joinPath(this.docsPath, originalCategory, baseName);
+        const nextPath = this.joinPath(
+          this.docsPath,
+          originalCategory,
+          baseName,
+        );
         return this.moveDocInternal(resolvedPath, nextPath, {
           message:
             request.message ??
@@ -555,7 +562,9 @@ export class GitHubContentStore {
     );
   }
 
-  private listDirectory(path: string): ResultAsync<GitHubFileEntry[], AppError> {
+  private listDirectory(
+    path: string,
+  ): ResultAsync<GitHubFileEntry[], AppError> {
     const normalized = normalizePath(path);
     return this.request(
       this.octokit.rest.repos.getContent({
@@ -599,6 +608,7 @@ export class GitHubContentStore {
       const content = response.data.content
         ? Buffer.from(response.data.content, "base64").toString("utf8")
         : "";
+
       return ok({ content, sha });
     });
   }
@@ -667,5 +677,4 @@ export class GitHubContentStore {
       return ok({ commitSha: response.data.commit.sha });
     });
   }
-
 }

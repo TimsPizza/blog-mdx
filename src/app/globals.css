@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
 @theme {
   --font-lxgw: var(--font-lxgw);
   --font-nutino: var(--font-nutino);
@@ -37,8 +38,7 @@
   --shadow-color: hsl(220 3% 15%);
   --shadow-strength: 1%;
 
-  --shadow-xs: 0 1px 2px 0
-    hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+  --shadow-xs: 0 1px 2px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
   --shadow-sm:
     0 1px 3px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%)),
     0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
@@ -46,15 +46,12 @@
     0 4px 6px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%)),
     0 2px 4px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%));
   --shadow-md:
-    0 10px 15px -3px
-      hsl(var(--shadow-color) / calc(var(--shadow-strength) + 7%)),
+    0 10px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 7%)),
     0 4px 6px -4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%));
   --shadow-lg:
-    0 20px 25px -5px
-      hsl(var(--shadow-color) / calc(var(--shadow-strength) + 6%)),
+    0 20px 25px -5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 6%)),
     0 8px 10px -6px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 7%));
-  --shadow-xl: 0 25px 50px -12px
-    hsl(var(--shadow-color) / calc(var(--shadow-strength) + 25%));
+  --shadow-xl: 0 25px 50px -12px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 25%));
 }
 
 @layer theme {
@@ -90,29 +87,20 @@
     --shadow-color: hsl(220 40% 2%);
     --shadow-strength: 4%;
 
-    --shadow-xs: 0 1px 2px 0
-      hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+    --shadow-xs: 0 1px 2px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
     --shadow-sm:
       0 1px 3px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 11%)),
-      0 1px 2px -1px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%));
+      0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%));
     --shadow:
-      0 4px 6px -1px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 14%)),
-      0 2px 4px -2px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 12%));
+      0 4px 6px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 14%)),
+      0 2px 4px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 12%));
     --shadow-md:
-      0 10px 15px -3px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 16%)),
-      0 4px 6px -4px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 13%));
+      0 10px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 16%)),
+      0 4px 6px -4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 13%));
     --shadow-lg:
-      0 20px 25px -5px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 18%)),
-      0 8px 10px -6px
-        hsl(var(--shadow-color) / calc(var(--shadow-strength) + 16%));
-    --shadow-xl: 0 25px 50px -12px
-      hsl(var(--shadow-color) / calc(var(--shadow-strength) + 35%));
+      0 20px 25px -5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 18%)),
+      0 8px 10px -6px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 16%));
+    --shadow-xl: 0 25px 50px -12px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 35%));
   }
 }
 
@@ -135,13 +123,16 @@
   }
 
   & {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
 }
 
 @layer utilities {
   @layer components {
+
     /* Card hover effect */
     .card-hover {
       transition:
@@ -157,7 +148,8 @@
 
   /* Reading optimizations */
   .reading-prose {
-    @apply prose prose-lg max-w-none prose-headings:font-lxgw prose-headings:tracking-tight prose-headings:text-foreground/90 prose-p:font-lxgw prose-p:leading-relaxed prose-p:tracking-wide prose-p:text-foreground/80 prose-a:underline prose-a:decoration-primary/40 prose-a:underline-offset-2 prose-a:text-primary/90 prose-strong:text-primary prose-strong:font-medium prose-em:text-foreground/70 prose-em:not-italic prose-em:font-normal prose-blockquote:border-l-2 prose-blockquote:border-primary/30 prose-blockquote:not-italic prose-blockquote:font-normal prose-blockquote:text-foreground/75 prose-code:text-primary prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-img:rounded-lg prose-img:shadow-sm prose-li:text-foreground/80 prose-li:marker:text-primary/60;
+    @apply prose prose-sm max-w-none prose-p:my-1 prose-p:first:mt-0 prose-p:last:mb-0 prose-headings:font-lxgw prose-headings:tracking-tight prose-headings:text-foreground/90 prose-p:font-lxgw prose-p:leading-relaxed prose-p:tracking-wide prose-p:text-foreground/80 prose-a:underline prose-a:decoration-primary/40 prose-a:underline-offset-2 prose-a:text-primary/90 prose-strong:text-primary prose-strong:font-medium prose-em:text-foreground/70 prose-em:not-italic prose-em:font-normal prose-blockquote:border-l-2 prose-blockquote:border-primary/30 prose-blockquote:not-italic prose-blockquote:font-normal prose-blockquote:text-foreground/75 prose-code:text-primary prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-img:rounded-lg prose-img:shadow-sm prose-li:text-foreground/80 prose-li:marker:text-primary/60;
+    ;
 
     a:hover {
       @apply text-primary;
@@ -171,6 +163,10 @@
       @apply mx-auto my-8;
     }
   }
+
+  /* .mdx-editor-content :where(p):not(:where(.not-prose, .not-prose *)) {
+    margin: 0;
+  } */
 
   /* Reading progress bar */
   .reading-progress {

@@ -2,9 +2,9 @@
 
 import { AnimatedListItem } from "@/components/animations/animated-section";
 import { Container } from "@/components/craft";
+import { stripMarkdown } from "@/components/mdx/heading-utils";
 import { TableOfContents } from "@/components/posts/table-of-contents";
 import { Badge } from "@/components/ui/badge";
-import { stripMarkdown } from "@/components/mdx/heading-utils";
 import { type Post } from "@/lib/api";
 import { Calendar, Clock } from "lucide-react";
 import Image from "next/image";
@@ -98,10 +98,7 @@ export function ArticleViewClient({
           </Container>
         </article>
 
-        <TableOfContents
-          className="hidden md:!fixed"
-          content={contentSource}
-        />
+        <TableOfContents className="hidden md:!fixed" content={contentSource} />
       </div>
     </>
   );

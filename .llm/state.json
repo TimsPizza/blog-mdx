@@ -1,11 +1,10 @@
 {
-  "completed_task_counter": 65,
-  "last_snapshot_commit": "25189f976a185ab80b390b899cf14eda12871d71",
-  "last_impl_index": 21,
-  "last_impl_time": "2025-12-26T18:36:47Z",
+  "completed_task_counter": 76,
+  "last_snapshot_commit": "6fa2f91e292dc3c5f72a1ad661b5ffbd9b712cde",
+  "last_impl_index": 24,
+  "last_impl_time": "2025-12-26T21:23:35Z",
   "pending_tasks": [],
   "done_tasks_since_last_impl": [
-    "Fix MDX editor descriptor typing and restore dynamic editor import",
-    "Remove custom MDX descriptor types to resolve editor descriptor TS errors"
+    "Add JSX insert control to the MDX editor toolbar"
   ]
 }

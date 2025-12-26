@@ -75,9 +75,7 @@ export function getAllPosts(params?: {
 }
 
 export function getAllCategories(): ResultAsync<Category[], AppError> {
-  return fetchDocs().map((docs) =>
-    Array.from(buildCategoryMap(docs).values()),
-  );
+  return fetchDocs().map((docs) => Array.from(buildCategoryMap(docs).values()));
 }
 
 export function getCategoryById(
@@ -88,7 +86,10 @@ export function getCategoryById(
   );
 }
 
-export function getAuthorById(): ResultAsync<{ name: string } | null, AppError> {
+export function getAuthorById(): ResultAsync<
+  { name: string } | null,
+  AppError
+> {
   // Author metadata is not modeled; return a placeholder to satisfy callers.
   return okAsync(null);
 }
@@ -104,8 +105,7 @@ export function getFeaturedMediaById(
 function mdxToPost(doc: MdxDocument, categories: Map<string, Category>): Post {
   const slug = stripMdxExtension(doc.path);
   const title = stringValue(doc.meta.title) ?? slug;
-  const summary =
-    stringValue(doc.meta.summary) ?? doc.content.slice(0, 200);
+  const summary = stringValue(doc.meta.summary) ?? doc.content.slice(0, 200);
   const excerpt = escapeHtml(summary);
 
   const tagList = toStringArray(doc.meta.tags);
@@ -147,20 +147,20 @@ function buildCategoryMap(docs: MdxDocument[]): Map<string, Category> {
       : undefined;
     if (!categoryFromPath) continue;
     const slug = categoryFromPath;
-      const existing = categories.get(slug);
-      if (existing) {
-        categories.set(slug, {
-          ...existing,
-          count: existing.count + 1,
-        });
-      } else {
-        categories.set(slug, {
-          id: nextId++,
-          name: slug,
-          slug,
-          count: 1,
-        });
-      }
+    const existing = categories.get(slug);
+    if (existing) {
+      categories.set(slug, {
+        ...existing,
+        count: existing.count + 1,
+      });
+    } else {
+      categories.set(slug, {
+        id: nextId++,
+        name: slug,
+        slug,
+        count: 1,
+      });
+    }
   }
 
   return categories;

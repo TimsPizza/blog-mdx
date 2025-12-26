@@ -17,6 +17,9 @@ importers:
       '@mdxeditor/editor':
         specifier: ^3.52.1
         version: 3.52.1(@codemirror/language@6.11.3)(@lezer/highlight@1.2.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(yjs@13.6.27)
+      '@mdxeditor/gurx':
+        specifier: ^1.2.4
+        version: 1.2.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
