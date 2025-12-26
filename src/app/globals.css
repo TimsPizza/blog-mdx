@@ -159,6 +159,16 @@
       @apply relative overflow-x-auto bg-muted-foreground py-4 text-white;
     }
 
+    pre[data-theme] {
+      background-color: var(--shiki-bg);
+      color: var(--shiki-color);
+    }
+
+    pre[data-theme] code {
+      background-color: transparent;
+      color: inherit;
+    }
+
     img {
       @apply mx-auto my-8;
     }

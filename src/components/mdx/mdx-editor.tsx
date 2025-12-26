@@ -180,9 +180,9 @@ export function MdxEditorWithRegistry({
         codeMirrorPlugin({
           codeBlockLanguages: {
             js: "JavaScript",
-            jsx: "JavaScript (React)",
             ts: "TypeScript",
-            tsx: "TypeScript (React)",
+            jsx: "JSX",
+            tsx: "TSX",
             json: "JSON",
             css: "CSS",
             html: "HTML",
