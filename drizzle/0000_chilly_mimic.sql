@@ -1,6 +1,7 @@
 CREATE TABLE `comments` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`slug` text NOT NULL,
+	`article_path` text NOT NULL,
+	`article_uid` text NOT NULL,
 	`author_name` text,
 	`author_email` text,
 	`content` text NOT NULL,
@@ -13,8 +14,9 @@ CREATE TABLE `comments` (
 	FOREIGN KEY (`parent_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `comments_slug_idx` ON `comments` (`slug`);--> statement-breakpoint
-CREATE INDEX `comments_slug_status_idx` ON `comments` (`slug`,`status`);--> statement-breakpoint
+CREATE INDEX `comments_path_idx` ON `comments` (`article_path`);--> statement-breakpoint
+CREATE INDEX `comments_uid_idx` ON `comments` (`article_uid`);--> statement-breakpoint
+CREATE INDEX `comments_path_status_idx` ON `comments` (`article_path`,`status`);--> statement-breakpoint
 CREATE INDEX `comments_parent_idx` ON `comments` (`parent_id`);--> statement-breakpoint
 CREATE TABLE `logs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -32,16 +34,19 @@ CREATE TABLE `sessions` (
 );
 --> statement-breakpoint
 CREATE TABLE `views` (
-	`slug` text PRIMARY KEY NOT NULL,
+	`article_uid` text PRIMARY KEY NOT NULL,
+	`article_path` text NOT NULL,
 	`count` integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `visits` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`slug` text NOT NULL,
+	`article_path` text NOT NULL,
+	`article_uid` text NOT NULL,
 	`ip` text,
 	`ua` text,
 	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')) NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `visits_slug_idx` ON `visits` (`slug`);
+CREATE INDEX `visits_path_idx` ON `visits` (`article_path`);--> statement-breakpoint
+CREATE INDEX `visits_uid_idx` ON `visits` (`article_uid`);

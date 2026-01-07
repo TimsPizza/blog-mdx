@@ -217,25 +217,6 @@ export function ArticleEditor({
     const now = nowSeconds();
 
     const needsMove = hasSaved && currentPath && currentPath !== nextPath;
-    if (needsMove) {
-      const moveRes = await fetch("/api/articles/move", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fromPath: currentPath,
-          toPath: nextPath,
-          message: `chore: move ${currentPath} to ${nextPath}`,
-        }),
-      });
-      if (!moveRes.ok) {
-        const text = await moveRes.text();
-        setSaveError(text || "移动文章失败。");
-        setSaving(false);
-        return;
-      }
-      setCurrentPath(nextPath);
-      setSha("");
-    }
 
     const meta: Record<string, unknown> = {
       title: title.trim(),
@@ -249,33 +230,38 @@ export function ArticleEditor({
       updatedAt: now,
     };
 
-    const requestSlug = stripMdxExtension(nextPath);
-    const response = await fetch(`/api/articles/${encodeURI(requestSlug)}`, {
-      method: "PUT",
+    const response = await fetch("/api/article", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        path: nextPath,
-        content,
-        meta,
-        sha: sha || undefined,
-        message: `chore: upsert ${nextPath}`,
+        v: 1,
+        op: "upsert",
+        params: {
+          path: nextPath,
+          previousPath: needsMove ? currentPath : undefined,
+          content,
+          meta,
+          sha: sha || undefined,
+          message: `chore: upsert ${nextPath}`,
+        },
       }),
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      setSaveError(text || "保存失败。");
+      const payload = (await response.json()) as {
+        error?: { message?: string };
+      };
+      setSaveError(payload.error?.message || "保存失败。");
       setSaving(false);
       return;
     }
 
     const payload = (await response.json()) as {
-      path?: string;
-      newSha?: string;
+      data?: { path?: string; newSha?: string };
     };
 
-    setCurrentPath(payload.path ?? nextPath);
-    setSha(payload.newSha ?? "");
+    setCurrentPath(payload.data?.path ?? nextPath);
+    setSha(payload.data?.newSha ?? "");
     setLastSavedAt(Date.now());
     setHasSaved(true);
     persistDraft({

@@ -94,15 +94,23 @@ export default function AdminCategoryPage() {
     setDialogDocs([]);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/articles?category=${encodeURIComponent(category)}`,
-        { cache: "no-store" },
-      );
+      const res = await fetch("/api/article", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          v: 1,
+          op: "list",
+          params: { category },
+        }),
+        cache: "no-store",
+      });
       if (!res.ok) {
         return;
       }
-      const data = (await res.json()) as { items?: ArticleSummary[] };
-      setDialogDocs(Array.isArray(data.items) ? data.items : []);
+      const data = (await res.json()) as {
+        data?: { items?: ArticleSummary[] };
+      };
+      setDialogDocs(Array.isArray(data.data?.items) ? data.data?.items ?? [] : []);
     } catch (err) {
       console.error("Failed to fetch category docs", err);
     }

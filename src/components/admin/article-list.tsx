@@ -61,10 +61,21 @@ export default function ArticleAdminClient({
   const refreshList = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/articles", { cache: "no-store" });
+      const res = await fetch("/api/article", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          v: 1,
+          op: "list",
+          params: {},
+        }),
+        cache: "no-store",
+      });
       if (res.ok) {
-        const data = (await res.json()) as { items?: ArticleListItem[] };
-        setArticles(data.items ?? []);
+        const data = (await res.json()) as {
+          data?: { items?: ArticleListItem[] };
+        };
+        setArticles(data.data?.items ?? []);
       }
     } catch (err) {
       console.error("Failed to refresh articles", err);
@@ -79,10 +90,17 @@ export default function ArticleAdminClient({
     try {
       await Promise.all(
         Array.from(selected).map((slug) =>
-          fetch(`/api/articles/${op}/${encodeURI(slug)}`, {
+          fetch("/api/article", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: `chore: ${op} ${slug}` }),
+            body: JSON.stringify({
+              v: 1,
+              op,
+              params: {
+                path: slug,
+                message: `chore: ${op} ${slug}`,
+              },
+            }),
           }),
         ),
       );
@@ -105,12 +123,16 @@ export default function ArticleAdminClient({
     try {
       await Promise.all(
         Array.from(selected).map((slug) =>
-          fetch(`/api/articles/${encodeURI(slug)}`, {
-            method: "DELETE",
+          fetch("/api/article", {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              path: `${slug}.mdx`,
-              message: `chore: delete ${slug}`,
+              v: 1,
+              op: "delete",
+              params: {
+                path: slug,
+                message: `chore: delete ${slug}`,
+              },
             }),
           }),
         ),

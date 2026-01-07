@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "76250101-55c9-4559-9722-fd1c46b4146a",
+  "id": "8761af55-c058-4e20-ac78-76f49b3021f5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "comments": {
@@ -14,8 +14,15 @@
           "notNull": true,
           "autoincrement": true
         },
-        "slug": {
-          "name": "slug",
+        "article_path": {
+          "name": "article_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "article_uid": {
+          "name": "article_uid",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -89,17 +96,24 @@
         }
       },
       "indexes": {
-        "comments_slug_idx": {
-          "name": "comments_slug_idx",
+        "comments_path_idx": {
+          "name": "comments_path_idx",
           "columns": [
-            "slug"
+            "article_path"
           ],
           "isUnique": false
         },
-        "comments_slug_status_idx": {
-          "name": "comments_slug_status_idx",
+        "comments_uid_idx": {
+          "name": "comments_uid_idx",
           "columns": [
-            "slug",
+            "article_uid"
+          ],
+          "isUnique": false
+        },
+        "comments_path_status_idx": {
+          "name": "comments_path_status_idx",
+          "columns": [
+            "article_path",
             "status"
           ],
           "isUnique": false
@@ -220,10 +234,17 @@
     "views": {
       "name": "views",
       "columns": {
-        "slug": {
-          "name": "slug",
+        "article_uid": {
+          "name": "article_uid",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "article_path": {
+          "name": "article_path",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -252,8 +273,15 @@
           "notNull": true,
           "autoincrement": true
         },
-        "slug": {
-          "name": "slug",
+        "article_path": {
+          "name": "article_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "article_uid": {
+          "name": "article_uid",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -283,10 +311,17 @@
         }
       },
       "indexes": {
-        "visits_slug_idx": {
-          "name": "visits_slug_idx",
+        "visits_path_idx": {
+          "name": "visits_path_idx",
           "columns": [
-            "slug"
+            "article_path"
+          ],
+          "isUnique": false
+        },
+        "visits_uid_idx": {
+          "name": "visits_uid_idx",
+          "columns": [
+            "article_uid"
           ],
           "isUnique": false
         }

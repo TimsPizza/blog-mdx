@@ -15,6 +15,7 @@ import {
   codeMirrorPlugin,
   headingsPlugin,
   insertJsx$,
+  insertMarkdown$,
   jsxPlugin,
   linkDialogPlugin,
   linkPlugin,
@@ -36,7 +37,7 @@ import {
   MDX_COMPONENT_REGISTRY,
 } from "./mdx-component-registry";
 
-type InsertableComponent = {
+type InsertableJsxComponent = {
   name: string;
   label: string;
   kind: "flow" | "text";
@@ -44,8 +45,22 @@ type InsertableComponent = {
   defaultProps?: Record<string, unknown>;
 };
 
-const INSERTABLE_COMPONENTS = Object.values(MDX_COMPONENT_REGISTRY).flatMap(
-  (definition): InsertableComponent[] => {
+type InsertableMarkdownItem = {
+  name: string;
+  label: string;
+  markdown: string;
+};
+
+type InsertableComponent = InsertableJsxComponent | InsertableMarkdownItem;
+
+const CODE_BLOCK_INSERT: InsertableMarkdownItem = {
+  name: "__code_block__",
+  label: "代码块",
+  markdown: "```ts\n\n```\n",
+};
+
+const JSX_INSERTABLE_COMPONENTS = Object.values(MDX_COMPONENT_REGISTRY).flatMap(
+  (definition): InsertableJsxComponent[] => {
     const name = definition.descriptor.name ?? definition.id;
     if (!name) return [];
     return [
@@ -60,7 +75,12 @@ const INSERTABLE_COMPONENTS = Object.values(MDX_COMPONENT_REGISTRY).flatMap(
   },
 );
 
-const buildJsxProps = (entry: InsertableComponent): JsxProperties => {
+const INSERTABLE_COMPONENTS: InsertableComponent[] = [
+  CODE_BLOCK_INSERT,
+  ...JSX_INSERTABLE_COMPONENTS,
+];
+
+const buildJsxProps = (entry: InsertableJsxComponent): JsxProperties => {
   const defaults = entry.defaultProps;
   if (!defaults) return {};
   const props: JsxProperties = {};
@@ -84,6 +104,7 @@ const buildJsxProps = (entry: InsertableComponent): JsxProperties => {
 
 const InsertMdxComponent = () => {
   const insertJsx = usePublisher(insertJsx$);
+  const insertMarkdown = usePublisher(insertMarkdown$);
   const [selectedName, setSelectedName] = useState(
     () => INSERTABLE_COMPONENTS[0]?.name ?? "",
   );
@@ -114,6 +135,10 @@ const InsertMdxComponent = () => {
         className="border-border text-foreground h-7 rounded-md border px-2 text-xs"
         onClick={() => {
           if (!selectedComponent) return;
+          if ("markdown" in selectedComponent) {
+            insertMarkdown(selectedComponent.markdown);
+            return;
+          }
           insertJsx({
             kind: selectedComponent.kind,
             name: selectedComponent.name,

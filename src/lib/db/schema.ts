@@ -11,7 +11,8 @@ export const comments = sqliteTable(
   "comments",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    slug: text("slug").notNull(),
+    articlePath: text("article_path").notNull(),
+    articleUid: text("article_uid").notNull(),
     authorName: text("author_name"),
     authorEmail: text("author_email"),
     content: text("content").notNull(),
@@ -31,8 +32,9 @@ export const comments = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
   },
   (table) => [
-    index("comments_slug_idx").on(table.slug),
-    index("comments_slug_status_idx").on(table.slug, table.status),
+    index("comments_path_idx").on(table.articlePath),
+    index("comments_uid_idx").on(table.articleUid),
+    index("comments_path_status_idx").on(table.articlePath, table.status),
     index("comments_parent_idx").on(table.parentId),
     foreignKey({
       columns: [table.parentId],
@@ -43,7 +45,8 @@ export const comments = sqliteTable(
 );
 
 export const views = sqliteTable("views", {
-  slug: text("slug").primaryKey(),
+  articleUid: text("article_uid").primaryKey(),
+  articlePath: text("article_path").notNull(),
   count: integer("count").notNull().default(0),
 });
 
@@ -57,14 +60,18 @@ export const visits = sqliteTable(
   "visits",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    slug: text("slug").notNull(),
+    articlePath: text("article_path").notNull(),
+    articleUid: text("article_uid").notNull(),
     ip: text("ip"),
     ua: text("ua"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
   },
-  (table) => [index("visits_slug_idx").on(table.slug)],
+  (table) => [
+    index("visits_path_idx").on(table.articlePath),
+    index("visits_uid_idx").on(table.articleUid),
+  ],
 );
 
 export const logs = sqliteTable(

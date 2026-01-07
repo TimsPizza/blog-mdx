@@ -34,6 +34,7 @@ type ParsedFrontmatter = {
 };
 
 const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n?/;
+const DEFAULT_CACHE_TTL_MS = 60 * 60 * 1000;
 
 function parseFrontmatter(source: string): ParsedFrontmatter {
   if (!source.startsWith("---")) {
@@ -186,7 +187,13 @@ function normalizePath(path: string): string {
 
 type GitHubErrorLike = {
   status?: number;
-  response?: { status?: number };
+  message?: string;
+  response?: { status?: number; data?: unknown };
+};
+
+type CacheEntry<T> = {
+  value: T;
+  expiresAt: number;
 };
 
 function getGitHubStatus(error: unknown): number | undefined {
@@ -199,12 +206,93 @@ function getGitHubStatus(error: unknown): number | undefined {
   return undefined;
 }
 
+function getGitHubResponseData(
+  error: unknown,
+): Record<string, unknown> | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const candidate = error as GitHubErrorLike;
+  const data = candidate.response?.data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return data as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function getGitHubMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const candidate = error as GitHubErrorLike;
+  const data = getGitHubResponseData(error);
+  const dataMessage =
+    data && typeof data.message === "string" ? data.message : undefined;
+  if (dataMessage) return dataMessage;
+  return typeof candidate.message === "string" ? candidate.message : undefined;
+}
+
+function buildGitHubDetails(error: unknown): Record<string, unknown> | undefined {
+  const details: Record<string, unknown> = {};
+  const status = getGitHubStatus(error);
+  if (typeof status === "number") details.githubStatus = status;
+  const data = getGitHubResponseData(error);
+  if (data) {
+    if (typeof data.message === "string") {
+      details.githubMessage = data.message;
+    }
+    if (typeof data.documentation_url === "string") {
+      details.githubDocUrl = data.documentation_url;
+    }
+    if (Array.isArray(data.errors)) {
+      details.githubErrors = data.errors;
+    }
+  }
+  return Object.keys(details).length > 0 ? details : undefined;
+}
+
 function mapGitHubError(error: unknown, message: string): AppError {
   const status = getGitHubStatus(error);
-  if (status === 404) return AppError.notFound(message);
-  if (status === 409) return AppError.conflict(message);
-  if (status === 401) return AppError.unauthorized(message);
-  return AppError.fromUnknown(error, { tag: "FETCH", message });
+  const responseMessage = getGitHubMessage(error);
+  const nextMessage = responseMessage ? `${message}: ${responseMessage}` : message;
+  const details = buildGitHubDetails(error);
+  if (status === 404) {
+    return new AppError({
+      code: "NOT_FOUND",
+      message: nextMessage,
+      tag: "FETCH",
+      expose: true,
+      details,
+    });
+  }
+  if (status === 409) {
+    return new AppError({
+      code: "CONFLICT",
+      message: nextMessage,
+      tag: "FETCH",
+      expose: true,
+      details,
+    });
+  }
+  if (status === 401) {
+    return new AppError({
+      code: "UNAUTHORIZED",
+      message: nextMessage,
+      tag: "FETCH",
+      expose: true,
+      details,
+    });
+  }
+  if (status === 403) {
+    return new AppError({
+      code: "FORBIDDEN",
+      message: nextMessage,
+      tag: "FETCH",
+      expose: true,
+      details,
+    });
+  }
+  return AppError.fromUnknown(error, {
+    tag: "FETCH",
+    message: nextMessage,
+    details,
+  });
 }
 
 export class GitHubContentStore {
@@ -213,6 +301,15 @@ export class GitHubContentStore {
   private readonly branch?: string;
   private readonly docsPath: string;
   private readonly octokit: Octokit;
+  private readonly cacheTtlMs: number;
+  private readonly fileCache = new Map<
+    string,
+    CacheEntry<{ content: string; sha: string }>
+  >();
+  private readonly dirCache = new Map<
+    string,
+    CacheEntry<GitHubFileEntry[]>
+  >();
 
   constructor(config: GitHubContentStoreConfig) {
     this.owner = config.owner;
@@ -220,6 +317,7 @@ export class GitHubContentStore {
     this.branch = config.branch;
     this.docsPath = normalizePath(config.docsPath ?? "");
     this.octokit = new Octokit({ auth: config.token });
+    this.cacheTtlMs = DEFAULT_CACHE_TTL_MS;
   }
 
   listAllCategories(): ResultAsync<string[], AppError> {
@@ -566,6 +664,10 @@ export class GitHubContentStore {
     path: string,
   ): ResultAsync<GitHubFileEntry[], AppError> {
     const normalized = normalizePath(path);
+    const cached = this.getCached(this.dirCache, normalized);
+    if (cached) {
+      return okAsync(cached);
+    }
     return this.request(
       this.octokit.rest.repos.getContent({
         owner: this.owner,
@@ -576,7 +678,7 @@ export class GitHubContentStore {
       `Failed to list ${normalized || "root"}`,
     ).map((response) => {
       if (Array.isArray(response.data)) {
-        return response.data
+        const entries = response.data
           .filter((entry) => entry.type === "file" || entry.type === "dir")
           .map((entry) => ({
             name: entry.name,
@@ -584,32 +686,43 @@ export class GitHubContentStore {
             sha: entry.sha,
             type: entry.type as "file" | "dir",
           }));
+        this.setCached(this.dirCache, normalized, entries);
+        return entries;
       }
-      return [];
+      const empty: GitHubFileEntry[] = [];
+      this.setCached(this.dirCache, normalized, empty);
+      return empty;
     });
   }
 
   private readFile(
     path: string,
   ): ResultAsync<{ content: string; sha: string }, AppError> {
+    const normalized = normalizePath(path);
+    const cached = this.getCached(this.fileCache, normalized);
+    if (cached) {
+      return okAsync(cached);
+    }
     return this.request(
       this.octokit.rest.repos.getContent({
         owner: this.owner,
         repo: this.repo,
-        path,
+        path: normalized,
         ref: this.branch,
       }),
-      `Failed to read ${path}`,
+      `Failed to read ${normalized}`,
     ).andThen((response) => {
       if (Array.isArray(response.data) || response.data.type !== "file") {
-        return err(AppError.notFound(`Expected file at ${path}`));
+        return err(AppError.notFound(`Expected file at ${normalized}`));
       }
       const sha = response.data.sha;
       const content = response.data.content
         ? Buffer.from(response.data.content, "base64").toString("utf8")
         : "";
 
-      return ok({ content, sha });
+      const value = { content, sha };
+      this.setCached(this.fileCache, normalized, value);
+      return ok(value);
     });
   }
 
@@ -619,32 +732,39 @@ export class GitHubContentStore {
     message: string;
     sha?: string;
   }): ResultAsync<{ contentSha: string; commitSha: string }, AppError> {
+    const normalized = normalizePath(args.path);
     return this.request(
       this.octokit.rest.repos.createOrUpdateFileContents({
         owner: this.owner,
         repo: this.repo,
-        path: args.path,
+        path: normalized,
         message: args.message,
         content: Buffer.from(args.content, "utf8").toString("base64"),
         sha: args.sha,
         branch: this.branch,
       }),
-      `Failed to write ${args.path}`,
+      `Failed to write ${normalized}`,
     ).andThen((response) => {
       if (!response.data.content?.sha || !response.data.commit?.sha) {
         return err(
           new AppError({
             code: "INTERNAL",
-            message: `Failed to write ${args.path}`,
+            message: `Failed to write ${normalized}`,
             tag: "FETCH",
             expose: false,
           }),
         );
       }
-      return ok({
+      const result = {
         contentSha: response.data.content.sha,
         commitSha: response.data.commit.sha,
+      };
+      this.setCached(this.fileCache, normalized, {
+        content: args.content,
+        sha: result.contentSha,
       });
+      this.invalidateDirectories(normalized);
+      return ok(result);
     });
   }
 
@@ -653,28 +773,65 @@ export class GitHubContentStore {
     sha: string;
     message: string;
   }): ResultAsync<{ commitSha: string }, AppError> {
+    const normalized = normalizePath(args.path);
     return this.request(
       this.octokit.rest.repos.deleteFile({
         owner: this.owner,
         repo: this.repo,
-        path: args.path,
+        path: normalized,
         message: args.message,
         sha: args.sha,
         branch: this.branch,
       }),
-      `Failed to delete ${args.path}`,
+      `Failed to delete ${normalized}`,
     ).andThen((response) => {
       if (!response.data.commit?.sha) {
         return err(
           new AppError({
             code: "INTERNAL",
-            message: `Failed to delete ${args.path}`,
+            message: `Failed to delete ${normalized}`,
             tag: "FETCH",
             expose: false,
           }),
         );
       }
-      return ok({ commitSha: response.data.commit.sha });
+      const result = { commitSha: response.data.commit.sha };
+      this.invalidateFile(normalized);
+      this.invalidateDirectories(normalized);
+      return ok(result);
     });
+  }
+
+  private getCached<T>(
+    cache: Map<string, CacheEntry<T>>,
+    key: string,
+  ): T | null {
+    const entry = cache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt <= Date.now()) {
+      cache.delete(key);
+      return null;
+    }
+    return entry.value;
+  }
+
+  private setCached<T>(
+    cache: Map<string, CacheEntry<T>>,
+    key: string,
+    value: T,
+  ) {
+    cache.set(key, { value, expiresAt: Date.now() + this.cacheTtlMs });
+  }
+
+  private invalidateFile(path: string) {
+    const normalized = normalizePath(path);
+    this.fileCache.delete(normalized);
+  }
+
+  private invalidateDirectories(path: string) {
+    const normalized = normalizePath(path);
+    const dir = normalized.split("/").slice(0, -1).join("/");
+    this.dirCache.delete(dir);
+    this.dirCache.delete(this.docsPath);
   }
 }

@@ -26,12 +26,13 @@ const POSTS_PER_PAGE = 12;
 export default async function PostsPage({
   searchParams,
 }: {
-  searchParams?: PostsPageSearchParams;
+  searchParams?: Promise<PostsPageSearchParams>;
 }) {
-  const page = parseInt(searchParams?.page || "1", 10);
-  const search = searchParams?.q || "";
-  const category = searchParams?.category;
-  const sort = searchParams?.sort || "date";
+  const resolvedParams = await searchParams;
+  const page = parseInt(resolvedParams?.page || "1", 10);
+  const search = resolvedParams?.q || "";
+  const category = resolvedParams?.category;
+  const sort = resolvedParams?.sort || "date";
 
   const categories = await getAllCategories().match(
     (items) => items,

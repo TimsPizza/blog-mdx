@@ -170,8 +170,13 @@
     }
 
     img {
-      @apply mx-auto;
+      @apply mx-auto
     }
+
+    code {
+      @apply px-4
+    }
+
   }
 
   /* .mdx-editor-content :where(p):not(:where(.not-prose, .not-prose *)) {

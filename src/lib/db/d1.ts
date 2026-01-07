@@ -171,39 +171,44 @@ function normalizeFromRows<T = D1ResultRow>(result: ColumnarResult): T[] {
 export class ViewsRepository {
   constructor(private readonly db: D1Client | null) {}
 
-  increment(slug: string): ResultAsync<number | null, AppError> {
+  increment(
+    articleUid: string,
+    articlePath: string,
+  ): ResultAsync<number | null, AppError> {
     const db = this.db;
     if (!db) return okAsync(null);
     return db
       .query<{ count: number }>(
-        "SELECT count FROM views WHERE slug = ?1",
-        [slug],
+        "SELECT count FROM views WHERE article_uid = ?1",
+        [articleUid],
       )
       .andThen((rows) => {
         const current = rows[0]?.count ?? 0;
         const next = current + 1;
         return db
           .query(
-            "INSERT OR REPLACE INTO views (slug, count) VALUES (?1, ?2)",
-            [slug, next],
+            "INSERT OR REPLACE INTO views (article_uid, article_path, count) VALUES (?1, ?2, ?3)",
+            [articleUid, articlePath, next],
           )
           .map(() => next);
       });
   }
 
-  getCount(slug: string): ResultAsync<number | null, AppError> {
+  getCount(articleUid: string): ResultAsync<number | null, AppError> {
     const db = this.db;
     if (!db) return okAsync(null);
     return db
-      .query<{ count: number }>("SELECT count FROM views WHERE slug = ?1", [
-        slug,
-      ])
+      .query<{ count: number }>(
+        "SELECT count FROM views WHERE article_uid = ?1",
+        [articleUid],
+      )
       .map((rows) => rows[0]?.count ?? 0);
   }
 }
 
 export interface VisitRecord {
-  slug: string;
+  articlePath: string;
+  articleUid: string;
   ip: string | null;
   ua: string | null;
   createdAt: string;
@@ -213,7 +218,8 @@ export class VisitsRepository {
   constructor(private readonly db: D1Client | null) {}
 
   recordVisit(
-    slug: string,
+    articlePath: string,
+    articleUid: string,
     ip: string | null,
     ua: string | null,
   ): ResultAsync<void, AppError> {
@@ -221,8 +227,8 @@ export class VisitsRepository {
     if (!db) return okAsync(undefined);
     return db
       .query(
-        "INSERT INTO visits (slug, ip, ua, created_at) VALUES (?1, ?2, ?3, datetime('now'))",
-        [slug, ip, ua],
+        "INSERT INTO visits (article_path, article_uid, ip, ua, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+        [articlePath, articleUid, ip, ua],
       )
       .map(() => undefined);
   }

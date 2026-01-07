@@ -19,7 +19,7 @@ export interface Post {
 export interface Category {
   id: number;
   name: string;
-  slug: string;
+  path: string;
   count: number;
 }
 
@@ -157,7 +157,7 @@ function buildCategoryMap(docs: MdxDocument[]): Map<string, Category> {
       categories.set(slug, {
         id: nextId++,
         name: slug,
-        slug,
+        path: slug,
         count: 1,
       });
     }

@@ -1,14 +1,10 @@
 import { Container, Section } from "@/components/craft";
 import { PostsGrid, type ExtendedPost } from "@/components/posts/posts-grid";
-import {
-  getAllCategories,
-  getAllPosts,
-  getFeaturedMediaById,
-} from "@/lib/api";
+import { getAllCategories, getAllPosts, getFeaturedMediaById } from "@/lib/api";
 import { notFound } from "next/navigation";
 
 type CategoryParams = {
-  slug: string;
+  slug: string; // category name
 };
 
 type CategoryPageSearchParams = {
@@ -22,17 +18,18 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<CategoryParams>;
-  searchParams?: CategoryPageSearchParams;
+  searchParams?: Promise<CategoryPageSearchParams>;
 }) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const slug = resolvedParams.slug;
-  const page = parseInt(searchParams?.page || "1", 10);
+  const page = parseInt(resolvedSearchParams?.page || "1", 10);
 
   const categories = await getAllCategories().match(
     (items) => items,
     () => [],
   );
-  const category = categories.find((item) => item.slug === slug);
+  const category = categories.find((item) => item.path === slug);
   if (!category) notFound();
 
   const posts = await getAllPosts({ category: category.id }).match(
@@ -71,7 +68,7 @@ export default async function CategoryPage({
             {category.name}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {category.count} 篇文章
+            {category.count} Post(s)
           </p>
         </div>
 

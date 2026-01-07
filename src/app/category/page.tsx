@@ -24,8 +24,8 @@ export default async function CategoryIndexPage() {
           {categories.map((category) => (
             <Link
               key={category.id}
-              href={`/category/${category.slug}`}
-              className="bg-card text-card-foreground flex items-center justify-between rounded-lg border px-4 py-3 transition hover:border-foreground/30"
+              href={`/category/${category.path}`}
+              className="bg-card text-card-foreground hover:border-foreground/30 flex items-center justify-between rounded-lg border px-4 py-3 transition"
             >
               <span className="text-sm font-medium">{category.name}</span>
               <span className="text-muted-foreground text-xs">
@@ -34,9 +34,7 @@ export default async function CategoryIndexPage() {
             </Link>
           ))}
           {categories.length === 0 && (
-            <div className="text-muted-foreground text-sm">
-              暂无分类
-            </div>
+            <div className="text-muted-foreground text-sm">暂无分类</div>
           )}
         </div>
       </Container>
