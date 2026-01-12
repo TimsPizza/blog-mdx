@@ -228,7 +228,9 @@ function getGitHubMessage(error: unknown): string | undefined {
   return typeof candidate.message === "string" ? candidate.message : undefined;
 }
 
-function buildGitHubDetails(error: unknown): Record<string, unknown> | undefined {
+function buildGitHubDetails(
+  error: unknown,
+): Record<string, unknown> | undefined {
   const details: Record<string, unknown> = {};
   const status = getGitHubStatus(error);
   if (typeof status === "number") details.githubStatus = status;
@@ -250,7 +252,9 @@ function buildGitHubDetails(error: unknown): Record<string, unknown> | undefined
 function mapGitHubError(error: unknown, message: string): AppError {
   const status = getGitHubStatus(error);
   const responseMessage = getGitHubMessage(error);
-  const nextMessage = responseMessage ? `${message}: ${responseMessage}` : message;
+  const nextMessage = responseMessage
+    ? `${message}: ${responseMessage}`
+    : message;
   const details = buildGitHubDetails(error);
   if (status === 404) {
     return new AppError({
@@ -306,10 +310,7 @@ export class GitHubContentStore {
     string,
     CacheEntry<{ content: string; sha: string }>
   >();
-  private readonly dirCache = new Map<
-    string,
-    CacheEntry<GitHubFileEntry[]>
-  >();
+  private readonly dirCache = new Map<string, CacheEntry<GitHubFileEntry[]>>();
 
   constructor(config: GitHubContentStoreConfig) {
     this.owner = config.owner;

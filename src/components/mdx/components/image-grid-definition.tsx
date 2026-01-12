@@ -1,17 +1,17 @@
 "use client";
 
 import type { MdxComponentDefinition } from "@/components/mdx/types";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
 import {
   ImageGridLayout,
   type ImageGridProps,
   IMAGE_GRID_COMPONENT_DESCRIPTOR,
 } from "./image-grid";
+import { ImageGridJsxEditor } from "./image-grid-editor";
 
 const IMAGE_GRID_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
   ...IMAGE_GRID_COMPONENT_DESCRIPTOR,
-  Editor: GenericJsxEditor,
+  Editor: ImageGridJsxEditor,
 };
 
 export const ImageGridDefinition: MdxComponentDefinition<ImageGridProps> = {

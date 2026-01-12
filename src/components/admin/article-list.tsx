@@ -223,7 +223,7 @@ export default function ArticleAdminClient({
                 <button
                   type="button"
                   onClick={() => handleEditClick(item.path)}
-                  className="text-foreground text-left text-sm font-medium hover:underline"
+                  className="text-foreground cursor-pointer text-left text-sm font-medium hover:underline"
                 >
                   {item.title || item.path}
                 </button>
@@ -238,7 +238,7 @@ export default function ArticleAdminClient({
                 {item.status ?? "draft"}
               </span>
               <span className="text-muted-foreground text-right text-sm">
-                {new Date(item.date).toLocaleDateString()}
+                {item.date}
               </span>
             </div>
           ))}

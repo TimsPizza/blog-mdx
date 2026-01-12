@@ -1,12 +1,12 @@
 "use client";
 
 import type { MdxComponentDefinition } from "@/components/mdx/types";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
+import { GenericJsxEditor } from "@mdxeditor/editor";
 import {
+  IMAGE_COMPONENT_DESCRIPTOR,
   MdxImage,
   type MdxImageProps,
-  IMAGE_COMPONENT_DESCRIPTOR,
 } from "./mdx-image";
 
 const IMAGE_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
@@ -16,7 +16,7 @@ const IMAGE_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
 
 export const ImageDefinition: MdxComponentDefinition<MdxImageProps> = {
   id: "Image",
-  label: "图片",
+  label: "Image",
   category: "media",
   descriptor: IMAGE_EDITOR_DESCRIPTOR,
   Renderer: MdxImage,

@@ -55,7 +55,7 @@ type InsertableComponent = InsertableJsxComponent | InsertableMarkdownItem;
 
 const CODE_BLOCK_INSERT: InsertableMarkdownItem = {
   name: "__code_block__",
-  label: "代码块",
+  label: "code block",
   markdown: "```ts\n\n```\n",
 };
 

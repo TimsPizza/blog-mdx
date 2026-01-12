@@ -85,6 +85,7 @@ export class CachePool<T> {
     let result: Result<void, AppError> = ok(undefined);
     try {
       await backOff(() => this.flushFn(batch), this.backoff);
+      console.debug(`[cache-db] flushing ${batch.length} items`);
       result = ok(undefined);
     } catch (error) {
       // Restore the batch at the front so we don't lose work.

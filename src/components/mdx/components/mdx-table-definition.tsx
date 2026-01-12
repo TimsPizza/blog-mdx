@@ -2,16 +2,16 @@
 
 import type { MdxComponentDefinition } from "@/components/mdx/types";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import {
   MdxTable,
   type MdxTableProps,
   TABLE_COMPONENT_DESCRIPTOR,
 } from "./mdx-table";
+import { MdxTableJsxEditor } from "./mdx-table-editor";
 
 const TABLE_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
   ...TABLE_COMPONENT_DESCRIPTOR,
-  Editor: GenericJsxEditor,
+  Editor: MdxTableJsxEditor,
 };
 
 const normalizeStringArray = (value: unknown) =>
@@ -34,7 +34,7 @@ const normalizeAlign = (value: unknown) => {
 
 export const TableDefinition: MdxComponentDefinition<MdxTableProps> = {
   id: "Table",
-  label: "表格",
+  label: "table",
   category: "data",
   descriptor: TABLE_EDITOR_DESCRIPTOR,
   Renderer: MdxTable,

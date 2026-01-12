@@ -36,6 +36,10 @@ export const ImageGridLayout: FC<ImageGridProps> = (props) => {
   const result = mdxPropsValidator(IMAGE_GRID_COMPONENT_DESCRIPTOR, props);
   if (!result.isValid) return result.errJsx;
   const imgUrls = Array.isArray(props.img_urls) ? props.img_urls : [];
+  const normalizedUrls = imgUrls
+    .map((url) => (typeof url === "string" ? url.trim() : String(url)))
+    .map((url) => (url === "placeholder" ? "" : url))
+    .filter(Boolean);
   const columnValue = Number(props.columns);
   const colCount = Math.max(
     1,
@@ -47,7 +51,7 @@ export const ImageGridLayout: FC<ImageGridProps> = (props) => {
       className="grid gap-3"
       style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
     >
-      {imgUrls.map((url, idx) => (
+      {normalizedUrls.map((url, idx) => (
         <Image
           key={idx}
           src={url}

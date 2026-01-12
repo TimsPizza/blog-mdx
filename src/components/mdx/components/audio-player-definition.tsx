@@ -1,12 +1,12 @@
 "use client";
 
 import type { MdxComponentDefinition } from "@/components/mdx/types";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
+import { GenericJsxEditor } from "@mdxeditor/editor";
 import {
+  AUDIO_PLAYER_COMPONENT_DESCRIPTOR,
   AudioPlayer,
   type AudioPlayerProps,
-  AUDIO_PLAYER_COMPONENT_DESCRIPTOR,
 } from "./audio-player";
 
 const AUDIO_PLAYER_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
@@ -22,7 +22,7 @@ const coerceBoolean = (value: unknown, fallback: boolean) => {
 
 export const AudioPlayerDefinition: MdxComponentDefinition<AudioPlayerProps> = {
   id: "AudioPlayer",
-  label: "音频播放器",
+  label: "audio player",
   category: "media",
   descriptor: AUDIO_PLAYER_EDITOR_DESCRIPTOR,
   Renderer: AudioPlayer,

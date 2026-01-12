@@ -1,12 +1,12 @@
 "use client";
 
 import type { MdxComponentDefinition } from "@/components/mdx/types";
-import { GenericJsxEditor } from "@mdxeditor/editor";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
+import { GenericJsxEditor } from "@mdxeditor/editor";
 import {
+  VIDEO_PLAYER_COMPONENT_DESCRIPTOR,
   VideoPlayer,
   type VideoPlayerProps,
-  VIDEO_PLAYER_COMPONENT_DESCRIPTOR,
 } from "./video-player";
 
 const VIDEO_PLAYER_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
@@ -22,7 +22,7 @@ const coerceBoolean = (value: unknown, fallback: boolean) => {
 
 export const VideoPlayerDefinition: MdxComponentDefinition<VideoPlayerProps> = {
   id: "VideoPlayer",
-  label: "视频播放器",
+  label: "video player",
   category: "media",
   descriptor: VIDEO_PLAYER_EDITOR_DESCRIPTOR,
   Renderer: VideoPlayer,
