@@ -9,7 +9,8 @@ import {
 
 import { Container, Section } from "@/components/craft";
 import { MobileNav } from "@/components/nav/mobile-nav";
-import { footerMenu, mainMenu, siteConfig } from "@/components/nav/nav.config";
+import { mainMenu, siteConfig } from "@/components/nav/nav.config";
+import { PageReveal } from "@/components/ui/page-reveal";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
@@ -69,7 +70,7 @@ export default function RootLayout({
           <main className="flex min-h-screen w-full flex-col">
             <Nav className={`${lxgw.className} text-lg font-bold`} />
             <div id="content-wrapper" className="min-h-screen flex-1">
-              {children}
+              <PageReveal>{children}</PageReveal>
             </div>
             <Footer />
           </main>
@@ -121,23 +122,11 @@ const Footer = () => {
       <Section>
         <Container className="not-prose flex flex-row justify-between gap-6 border-t px-4 !py-2 md:items-start md:gap-2">
           <ThemeToggle className="ml-4 md:mr-auto" />
-          <div className="flex flex-row justify-center gap-4">
-            <div className="divider-tail relative hidden flex-col items-start justify-center gap-1 md:flex">
-              {Object.entries(footerMenu).map(([key, href]) => (
-                <NavItem
-                  key={href}
-                  className="text-muted-foreground !text-[16px] !font-light"
-                  href={href}
-                  text={key}
-                />
-              ))}
-            </div>
-
-            <div className="flex flex-col items-start justify-center gap-2">
-              <p className="text-muted-foreground">
-                &copy; <a href="https://github.com/TimsPizza">timspizza</a>.
+          <div className="mb-auto flex flex-row justify-center gap-4">
+            <div className="justify-centerself-end flex flex-col items-start gap-0.5">
+              <p className="text-muted-foreground text-sm">
+                <a href="https://github.com/TimsPizza">{`@timspizza`}</a>
               </p>
-              <p className="text-muted-foreground">2025-present</p>
             </div>
           </div>
         </Container>

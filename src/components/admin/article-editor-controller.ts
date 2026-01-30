@@ -17,6 +17,7 @@ export type ArticleEditorModel = {
   title: string;
   category: string;
   summary: string;
+  coverImageUrl: string;
   content: string;
   saving: boolean;
   saveError: string | null;
@@ -29,6 +30,7 @@ export type ArticleEditorActions = {
   setTitle: (value: string) => void;
   setCategory: (value: string) => void;
   setSummary: (value: string) => void;
+  setCoverImageUrl: (value: string) => void;
   setContent: (value: string) => void;
   clearDraft: () => void;
   save: () => Promise<void>;
@@ -111,13 +113,13 @@ export function useArticleEditorController({
 
   const baseTitle = initialDoc?.meta.title?.trim() || baseFileStem;
   const baseSummary = initialDoc?.meta.summary ?? "";
+  const baseCoverImageUrl = initialDoc?.meta.coverImageUrl ?? "";
   const baseContent = initialDoc?.content ?? "";
   const baseUid = initialDoc?.meta.uid ?? ensureUid();
   const baseCreatedAt = initialDoc?.meta.createdAt ?? initialTimestamp;
   const preservedMeta = useMemo(
     () => ({
       tags: initialDoc?.meta.tags,
-      coverImageUrl: initialDoc?.meta.coverImageUrl,
       status: initialDoc?.meta.status ?? "draft",
     }),
     [initialDoc],
@@ -137,11 +139,20 @@ export function useArticleEditorController({
       title: baseTitle,
       category: baseCategory,
       summary: baseSummary,
+      coverImageUrl: baseCoverImageUrl,
       content: baseContent,
       uid: baseUid,
       createdAt: baseCreatedAt,
     }),
-    [baseTitle, baseCategory, baseSummary, baseContent, baseUid, baseCreatedAt],
+    [
+      baseTitle,
+      baseCategory,
+      baseSummary,
+      baseCoverImageUrl,
+      baseContent,
+      baseUid,
+      baseCreatedAt,
+    ],
   );
 
   const draftKey = useMemo(
@@ -153,8 +164,16 @@ export function useArticleEditorController({
     useArticleDraftStore();
 
   const draftEntry = useMemo(() => drafts[draftKey], [draftKey, drafts]);
+  const normalizeDraft = useCallback(
+    (data?: ArticleDraftData) => ({
+      ...baseData,
+      ...data,
+      coverImageUrl: data?.coverImageUrl ?? baseData.coverImageUrl,
+    }),
+    [baseData],
+  );
   const [draftData, setDraftData] = useState<ArticleDraftData>(
-    draftEntry?.data ?? baseData,
+    normalizeDraft(draftEntry?.data),
   );
   const [currentPath, setCurrentPath] = useState(basePath);
   const [sha, setSha] = useState(initialDoc?.sha ?? "");
@@ -179,9 +198,9 @@ export function useArticleEditorController({
 
   useEffect(() => {
     if (!draftEntry || hydratedRef.current) return;
-    setDraftData(draftEntry.data);
+    setDraftData(normalizeDraft(draftEntry.data));
     hydratedRef.current = true;
-  }, [draftEntry]);
+  }, [draftEntry, normalizeDraft]);
 
   useEffect(() => {
     let active = true;
@@ -226,6 +245,10 @@ export function useArticleEditorController({
     setDraftData((prev) => ({ ...prev, summary: value }));
   }, []);
 
+  const setCoverImageUrl = useCallback((value: string) => {
+    setDraftData((prev) => ({ ...prev, coverImageUrl: value }));
+  }, []);
+
   const setContent = useCallback((value: string) => {
     setDraftData((prev) => ({ ...prev, content: value }));
   }, []);
@@ -264,12 +287,14 @@ export function useArticleEditorController({
     const now = nowSeconds();
     const needsMove = hasSaved && currentPath && currentPath !== nextPath;
 
+    const nextStatus =
+      preservedMeta.status === "archived" ? "archived" : "published";
     const meta: Record<string, unknown> = {
       title: draftData.title.trim(),
       summary: draftData.summary.trim() || undefined,
       tags: preservedMeta.tags?.length ? preservedMeta.tags : undefined,
-      coverImageUrl: preservedMeta.coverImageUrl || undefined,
-      status: preservedMeta.status ?? "draft",
+      coverImageUrl: draftData.coverImageUrl.trim() || undefined,
+      status: nextStatus,
       originalCategory: normalizeCategory(draftData.category),
       uid: draftData.uid,
       createdAt: draftData.createdAt || now,
@@ -325,7 +350,6 @@ export function useArticleEditorController({
     draftKey,
     hasSaved,
     isNewArticle,
-    preservedMeta.coverImageUrl,
     preservedMeta.status,
     preservedMeta.tags,
     saving,
@@ -343,6 +367,7 @@ export function useArticleEditorController({
       title: draftData.title,
       category: draftData.category,
       summary: draftData.summary,
+      coverImageUrl: draftData.coverImageUrl,
       content: draftData.content,
       saving,
       saveError,
@@ -354,6 +379,7 @@ export function useArticleEditorController({
       setTitle,
       setCategory,
       setSummary,
+      setCoverImageUrl,
       setContent,
       clearDraft: handleClearDraft,
       save: handleSave,

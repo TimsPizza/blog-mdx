@@ -5,6 +5,7 @@ import {
   integer,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 export const comments = sqliteTable(
@@ -16,8 +17,10 @@ export const comments = sqliteTable(
     authorName: text("author_name"),
     authorEmail: text("author_email"),
     content: text("content").notNull(),
+    upvotes: integer("upvotes").notNull().default(0),
+    downvotes: integer("downvotes").notNull().default(0),
     status: text("status", {
-      enum: ["pending", "approved", "spam", "deleted"],
+      enum: ["pending", "approved", "archived", "spam", "deleted"],
     })
       .notNull()
       .default("pending"),
@@ -43,12 +46,6 @@ export const comments = sqliteTable(
     }).onDelete("cascade"),
   ],
 );
-
-export const views = sqliteTable("views", {
-  articleUid: text("article_uid").primaryKey(),
-  articlePath: text("article_path").notNull(),
-  count: integer("count").notNull().default(0),
-});
 
 export const sessions = sqliteTable("sessions", {
   session_token: text("session_token").primaryKey(),
@@ -88,5 +85,50 @@ export const logs = sqliteTable(
   (table) => [index("logs_level_idx").on(table.level)],
 );
 
+export const newsletter_subscribers = sqliteTable(
+  "newsletter_subscribers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    email: text("email").notNull(),
+    status: text("status", {
+      enum: ["active", "unsubscribed"],
+    })
+      .notNull()
+      .default("active"),
+    source: text("source"),
+    ip: text("ip"),
+    user_agent: text("user_agent"),
+    created_at: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updated_at: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("newsletter_email_idx").on(table.email),
+    index("newsletter_created_at_idx").on(table.created_at),
+  ],
+);
+
+export const newsletter_queue = sqliteTable(
+  "newsletter_queue",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    article_uid: text("article_uid").notNull(),
+    article_path: text("article_path").notNull(),
+    created_at: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    sent_at: integer("sent_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    uniqueIndex("newsletter_queue_uid_idx").on(table.article_uid),
+    index("newsletter_queue_sent_idx").on(table.sent_at),
+  ],
+);
+
 export type Comment = InferSelectModel<typeof comments>;
 export type NewComment = InferInsertModel<typeof comments>;
+export type NewsletterSubscriber = InferSelectModel<
+  typeof newsletter_subscribers
+>;
+export type NewNewsletterSubscriber = InferInsertModel<
+  typeof newsletter_subscribers
+>;
+export type NewsletterQueueItem = InferSelectModel<typeof newsletter_queue>;
+export type NewNewsletterQueueItem = InferInsertModel<typeof newsletter_queue>;

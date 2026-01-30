@@ -103,6 +103,31 @@ export function ArticleEditor(props: ArticleEditorProps) {
         </label>
 
         <div className="space-y-2">
+          <label className="space-y-2">
+            <span className="text-foreground/80 text-sm font-medium">
+              封面图片 URL
+            </span>
+            <Input
+              value={model.coverImageUrl}
+              onChange={(e) => {
+                actions.setCoverImageUrl(e.target.value);
+              }}
+              placeholder="https://example.com/cover.jpg"
+            />
+          </label>
+          {model.coverImageUrl.trim() && (
+            <div className="bg-muted flex max-h-64 w-full items-center justify-center overflow-hidden rounded-md border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={model.coverImageUrl}
+                alt="cover preview"
+                className="max-h-64 w-full object-cover"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <span
             id="mdx-content-label"
             className="text-foreground/80 text-sm font-medium"

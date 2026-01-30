@@ -1,45 +1,40 @@
 "use client";
 import { FeaturedPostCard } from "@/components/home/featured-post-card";
 import { Pagination } from "@/components/ui/pagination";
-import { type Post } from "@/lib/api";
+import { type Category, type Post } from "@/lib/api";
 
 interface PostsGridProps {
   posts: Post[];
   currentPage: number;
   totalPages: number;
+  categories?: Category[];
 }
 
-interface MediaType {
-  source_url: string;
-}
-
-interface CategoryType {
-  id: number;
-  name: string;
-}
-
-interface AuthorType {
-  name: string;
-}
-
-export interface ExtendedPost extends Post {
-  _media?: MediaType;
-  _author?: AuthorType;
-  _category?: CategoryType;
-}
-
-export function PostsGrid({ posts, currentPage, totalPages }: PostsGridProps) {
+export function PostsGrid({
+  posts,
+  currentPage,
+  totalPages,
+  categories = [],
+}: PostsGridProps) {
+  const categoryMap = new Map(categories.map((item) => [item.id, item]));
   return (
     <div className="space-y-8">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {posts.map((post: ExtendedPost) => (
-          <FeaturedPostCard
-            key={post.id}
-            post={post}
-            media={post._media}
-            category={post._category}
-          />
-        ))}
+        {posts.map((post) => {
+          const categoryId = post.categories?.[0];
+          const category =
+            typeof categoryId === "number"
+              ? categoryMap.get(categoryId) ?? null
+              : null;
+          return (
+            <FeaturedPostCard
+              key={post.id}
+              post={post}
+              coverUrl={post.featured_media ?? null}
+              category={category}
+            />
+          );
+        })}
       </div>
 
       {totalPages > 1 && (

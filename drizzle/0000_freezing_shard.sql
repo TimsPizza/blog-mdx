@@ -5,6 +5,8 @@ CREATE TABLE `comments` (
 	`author_name` text,
 	`author_email` text,
 	`content` text NOT NULL,
+	`upvotes` integer DEFAULT 0 NOT NULL,
+	`downvotes` integer DEFAULT 0 NOT NULL,
 	`status` text DEFAULT 'pending' NOT NULL,
 	`parent_id` integer,
 	`ip_hash` text,
@@ -27,16 +29,33 @@ CREATE TABLE `logs` (
 );
 --> statement-breakpoint
 CREATE INDEX `logs_level_idx` ON `logs` (`level`);--> statement-breakpoint
+CREATE TABLE `newsletter_queue` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`article_uid` text NOT NULL,
+	`article_path` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`sent_at` integer
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `newsletter_queue_uid_idx` ON `newsletter_queue` (`article_uid`);--> statement-breakpoint
+CREATE INDEX `newsletter_queue_sent_idx` ON `newsletter_queue` (`sent_at`);--> statement-breakpoint
+CREATE TABLE `newsletter_subscribers` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`email` text NOT NULL,
+	`status` text DEFAULT 'active' NOT NULL,
+	`source` text,
+	`ip` text,
+	`user_agent` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `newsletter_email_idx` ON `newsletter_subscribers` (`email`);--> statement-breakpoint
+CREATE INDEX `newsletter_created_at_idx` ON `newsletter_subscribers` (`created_at`);--> statement-breakpoint
 CREATE TABLE `sessions` (
 	`session_token` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`expires` integer NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE `views` (
-	`article_uid` text PRIMARY KEY NOT NULL,
-	`article_path` text NOT NULL,
-	`count` integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `visits` (

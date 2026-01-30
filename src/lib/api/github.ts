@@ -9,6 +9,7 @@ import {
   type UpsertDocRequest,
   type UpsertDocResponse,
 } from "@/lib/api/types";
+import { ReadCache } from "@/lib/cache/read-cache";
 import { AppError } from "@/types/error";
 import { err, ok, okAsync, ResultAsync } from "neverthrow";
 import { Octokit } from "octokit";
@@ -191,11 +192,6 @@ type GitHubErrorLike = {
   response?: { status?: number; data?: unknown };
 };
 
-type CacheEntry<T> = {
-  value: T;
-  expiresAt: number;
-};
-
 function getGitHubStatus(error: unknown): number | undefined {
   if (!error || typeof error !== "object") return undefined;
   const candidate = error as GitHubErrorLike;
@@ -306,11 +302,8 @@ export class GitHubContentStore {
   private readonly docsPath: string;
   private readonly octokit: Octokit;
   private readonly cacheTtlMs: number;
-  private readonly fileCache = new Map<
-    string,
-    CacheEntry<{ content: string; sha: string }>
-  >();
-  private readonly dirCache = new Map<string, CacheEntry<GitHubFileEntry[]>>();
+  private readonly fileCache: ReadCache<{ content: string; sha: string }>;
+  private readonly dirCache: ReadCache<GitHubFileEntry[]>;
 
   constructor(config: GitHubContentStoreConfig) {
     this.owner = config.owner;
@@ -319,6 +312,14 @@ export class GitHubContentStore {
     this.docsPath = normalizePath(config.docsPath ?? "");
     this.octokit = new Octokit({ auth: config.token });
     this.cacheTtlMs = DEFAULT_CACHE_TTL_MS;
+    this.fileCache = new ReadCache({
+      ttlMs: this.cacheTtlMs,
+      logPrefix: "article-blob",
+    });
+    this.dirCache = new ReadCache({
+      ttlMs: this.cacheTtlMs,
+      logPrefix: "article-dir",
+    });
   }
 
   listAllCategories(): ResultAsync<string[], AppError> {
@@ -665,7 +666,7 @@ export class GitHubContentStore {
     path: string,
   ): ResultAsync<GitHubFileEntry[], AppError> {
     const normalized = normalizePath(path);
-    const cached = this.getCached(this.dirCache, normalized);
+    const cached = this.dirCache.get(normalized);
     if (cached) {
       return okAsync(cached);
     }
@@ -687,11 +688,11 @@ export class GitHubContentStore {
             sha: entry.sha,
             type: entry.type as "file" | "dir",
           }));
-        this.setCached(this.dirCache, normalized, entries);
+        this.dirCache.set(normalized, entries);
         return entries;
       }
       const empty: GitHubFileEntry[] = [];
-      this.setCached(this.dirCache, normalized, empty);
+      this.dirCache.set(normalized, empty);
       return empty;
     });
   }
@@ -700,7 +701,7 @@ export class GitHubContentStore {
     path: string,
   ): ResultAsync<{ content: string; sha: string }, AppError> {
     const normalized = normalizePath(path);
-    const cached = this.getCached(this.fileCache, normalized);
+    const cached = this.fileCache.get(normalized);
     if (cached) {
       return okAsync(cached);
     }
@@ -722,7 +723,7 @@ export class GitHubContentStore {
         : "";
 
       const value = { content, sha };
-      this.setCached(this.fileCache, normalized, value);
+      this.fileCache.set(normalized, value);
       return ok(value);
     });
   }
@@ -760,7 +761,7 @@ export class GitHubContentStore {
         contentSha: response.data.content.sha,
         commitSha: response.data.commit.sha,
       };
-      this.setCached(this.fileCache, normalized, {
+      this.fileCache.set(normalized, {
         content: args.content,
         sha: result.contentSha,
       });
@@ -803,36 +804,15 @@ export class GitHubContentStore {
     });
   }
 
-  private getCached<T>(
-    cache: Map<string, CacheEntry<T>>,
-    key: string,
-  ): T | null {
-    const entry = cache.get(key);
-    if (!entry) return null;
-    if (entry.expiresAt <= Date.now()) {
-      cache.delete(key);
-      return null;
-    }
-    return entry.value;
-  }
-
-  private setCached<T>(
-    cache: Map<string, CacheEntry<T>>,
-    key: string,
-    value: T,
-  ) {
-    cache.set(key, { value, expiresAt: Date.now() + this.cacheTtlMs });
-  }
-
   private invalidateFile(path: string) {
     const normalized = normalizePath(path);
-    this.fileCache.delete(normalized);
+    this.fileCache.invalidate(normalized);
   }
 
   private invalidateDirectories(path: string) {
     const normalized = normalizePath(path);
     const dir = normalized.split("/").slice(0, -1).join("/");
-    this.dirCache.delete(dir);
-    this.dirCache.delete(this.docsPath);
+    this.dirCache.invalidate(dir);
+    this.dirCache.invalidate(this.docsPath);
   }
 }

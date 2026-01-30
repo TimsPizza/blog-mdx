@@ -1,12 +1,7 @@
 import { Container, Section } from "@/components/craft";
-import { ExtendedPost, PostsGrid } from "@/components/posts/posts-grid";
+import { PostsGrid } from "@/components/posts/posts-grid";
 import { SearchFilter } from "@/components/posts/search-filter";
-import {
-  getAllCategories,
-  getAllPosts,
-  getFeaturedMediaById,
-  type Category,
-} from "@/lib/api";
+import { getAllCategories, getAllPosts, type Category } from "@/lib/api";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -65,22 +60,7 @@ export default async function PostsPage({
     (items) => items,
     () => [],
   );
-  const allPosts = await Promise.all(
-    basePosts.map(async (post) => {
-      const media = post.featured_media
-        ? await getFeaturedMediaById(post.featured_media).match(
-            (value) => value,
-            () => null,
-          )
-        : null;
-      if (media) {
-        (post as ExtendedPost)._media = media;
-      }
-      return post as ExtendedPost;
-    }),
-  );
-
-  const sortedPosts = [...allPosts].sort((a, b) => {
+  const sortedPosts = [...basePosts].sort((a, b) => {
     switch (sort) {
       case "date-asc":
         return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -131,6 +111,7 @@ export default async function PostsPage({
           posts={paginatedPosts}
           currentPage={currentPage}
           totalPages={totalPages}
+          categories={categories}
         />
       </Container>
     </Section>

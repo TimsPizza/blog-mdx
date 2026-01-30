@@ -13,15 +13,16 @@ export function Hero() {
               <Tag className="mr-2 h-4 w-4" />
               <span>Tech | Essay | Learning</span>
             </div>
-
-            <h1 className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-              tim&apos;s nest
-            </h1>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
+                tim&apos;s nest
+              </h1>
+            </div>
 
             <p className="font-lxgw text-muted-foreground text-lg">
               Hi, I&apos;m Peisen (Tim), this is my personal blog and mind zone.
-              I share my thoughts, learning notes, and technical articles here.
-              Feel free to explore and learn with me!
+              I pour my thoughts, learning notes, technical articles, and
+              everything here.
             </p>
 
             <div className="flex flex-wrap gap-3">

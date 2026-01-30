@@ -158,6 +158,8 @@ function codeToStatus(code: AppErrorCode): number {
       return 404;
     case "CONFLICT":
       return 409;
+    case "TOO_MANY_REQUESTS":
+      return 429;
     case "INTERNAL":
     default:
       return 500;

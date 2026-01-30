@@ -3,9 +3,9 @@
 import type { MdxComponentDefinition } from "@/components/mdx/types";
 import type { JsxComponentDescriptor } from "@mdxeditor/editor";
 import {
+  IMAGE_GRID_COMPONENT_DESCRIPTOR,
   ImageGridLayout,
   type ImageGridProps,
-  IMAGE_GRID_COMPONENT_DESCRIPTOR,
 } from "./image-grid";
 import { ImageGridJsxEditor } from "./image-grid-editor";
 
@@ -16,7 +16,7 @@ const IMAGE_GRID_EDITOR_DESCRIPTOR: JsxComponentDescriptor = {
 
 export const ImageGridDefinition: MdxComponentDefinition<ImageGridProps> = {
   id: "ImageGrid",
-  label: "图片网格",
+  label: "Image Grid",
   category: "media",
   descriptor: IMAGE_GRID_EDITOR_DESCRIPTOR,
   Renderer: ImageGridLayout,

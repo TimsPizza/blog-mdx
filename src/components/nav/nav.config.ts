@@ -2,6 +2,7 @@ import { SiteConfig } from "@/types/layout";
 
 // Define the menu items
 export const mainMenu = {
+  portfolio: "https://me.kixstar.xyz",
   categories: "/category",
   articles: "/posts",
 };
@@ -13,7 +14,6 @@ export const contentMenu = {
 };
 
 export const footerMenu = {
-  portfolio: "https://me.kixstar.xyz",
   github: "https://github.com/TimsPizza",
 };
 

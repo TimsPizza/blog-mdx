@@ -7,6 +7,7 @@ export type ArticleDraftData = {
   title: string;
   category: string;
   summary: string;
+  coverImageUrl: string;
   content: string;
   uid: string;
   createdAt: number;
@@ -38,6 +39,7 @@ const isDraftEqual = (a: ArticleDraftData, b: ArticleDraftData) =>
   a.title === b.title &&
   a.category === b.category &&
   a.summary === b.summary &&
+  a.coverImageUrl === b.coverImageUrl &&
   a.content === b.content &&
   a.uid === b.uid &&
   a.createdAt === b.createdAt;

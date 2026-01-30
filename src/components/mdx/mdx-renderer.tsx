@@ -4,6 +4,7 @@ import {
 } from "@/components/mdx/heading-utils";
 import { mdxComponentRenderers } from "@/components/mdx/mdx-renderer-registry";
 import { compileMDX } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import rehypePrettyCode from "rehype-pretty-code";
 import type { ReactNode } from "react";
 import { isValidElement } from "react";
@@ -47,6 +48,7 @@ export async function MdxRendered({ mdxSourceString }: MdxRenderedProps) {
     options: {
       mdxOptions: {
         format: "mdx",
+        remarkPlugins: [remarkGfm],
         rehypePlugins: [rehypePrettyCode],
       },
     },

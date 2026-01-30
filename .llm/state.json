@@ -1,10 +1,13 @@
 {
-  "completed_task_counter": 98,
-  "last_snapshot_commit": "a00279c75cb8266157dde5a54834e5bec1ac06aa",
-  "last_impl_index": 30,
-  "last_impl_time": "2026-01-07T21:24:29Z",
+  "completed_task_counter": 135,
+  "last_snapshot_commit": "946132e86781503185177231e08714d5afc65b52",
+  "last_impl_index": 40,
+  "last_impl_time": "2026-01-29T23:24:58Z",
   "pending_tasks": [],
   "done_tasks_since_last_impl": [
-    "Add custom MDX table editor with edge add-row/column controls"
+    "Add subscribe feature toggle for public signup",
+    "Default subscribe toggle to off",
+    "Replace views with visits-based ORM stats",
+    "Move visit tracking to post page render"
   ]
 }

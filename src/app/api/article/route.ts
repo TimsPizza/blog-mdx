@@ -1,6 +1,6 @@
-import { createD1ClientFromEnv, ViewsRepository } from "@/lib/db/d1";
 import { requireAdminResult } from "@/lib/server/admin-auth";
 import { getContentStore, listDocuments } from "@/lib/server/content-store";
+import { enqueueArticleForNewsletter } from "@/lib/server/newsletter";
 import { mapDocToPost } from "@/lib/server/posts";
 import { AppError } from "@/types/error";
 import { err, errAsync, okAsync, ResultAsync } from "neverthrow";
@@ -156,21 +156,17 @@ const handleGet: ArticleHandler = (params) => {
         )
       : errAsync(AppError.invalidRequest("Missing article path or uid"));
 
-  const viewsRepo = new ViewsRepository(createD1ClientFromEnv());
   return docResult.andThen((doc) => {
     if (!doc.meta?.uid) {
       return errAsync(AppError.invalidRequest("Article uid is missing"));
     }
     const post = mapDocToPost(doc);
-    return viewsRepo
-      .increment(doc.meta.uid, doc.path)
-      .orElse(() => okAsync(null))
-      .map((views) => ({
-        post,
-        sha: doc.sha,
-        views,
-        articleUid: doc.meta.uid,
-      }));
+    return okAsync({
+      post,
+      sha: doc.sha,
+      views: null,
+      articleUid: doc.meta.uid,
+    });
   });
 };
 
@@ -194,6 +190,16 @@ const handleUpsert: ArticleHandler = (params) => {
           meta,
           sha: effectiveSha,
           message,
+        });
+      const enqueueIfNew = (result: { path: string; newSha: string }) =>
+        store.getDoc(path).andThen((doc) => {
+          if (!doc.meta?.uid) {
+            return errAsync(AppError.invalidRequest("Article uid is missing"));
+          }
+          return enqueueArticleForNewsletter({
+            articleUid: doc.meta.uid,
+            articlePath: doc.path,
+          }).map(() => result);
         });
 
       if (previousPath && previousPath !== path) {
@@ -224,7 +230,7 @@ const handleUpsert: ArticleHandler = (params) => {
         )
         .orElse((error) => {
           if (error.code === "NOT_FOUND") {
-            return performUpsert(undefined);
+            return performUpsert(undefined).andThen(enqueueIfNew);
           }
           return errAsync(error);
         });

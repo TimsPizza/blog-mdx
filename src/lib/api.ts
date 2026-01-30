@@ -6,6 +6,8 @@ import { okAsync, type ResultAsync } from "neverthrow";
 export interface Post {
   id: string;
   slug: string;
+  articleUid?: string;
+  articlePath?: string;
   title: { rendered: string };
   excerpt: { rendered: string };
   content: { mdx: string };
@@ -120,6 +122,8 @@ function mdxToPost(doc: MdxDocument, categories: Map<string, Category>): Post {
   return {
     id: slug,
     slug,
+    articleUid: doc.meta.uid,
+    articlePath: doc.path,
     title: { rendered: escapeHtml(title) },
     excerpt: { rendered: excerpt },
     content: { mdx: doc.content },

@@ -1,6 +1,6 @@
 import { stripMarkdown } from "@/components/mdx/heading-utils";
 import { Badge } from "@/components/ui/badge";
-import { type Post } from "@/lib/api";
+import { type Category, type Post } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
 import Image from "next/image";
@@ -8,35 +8,27 @@ import Link from "next/link";
 
 interface FeaturedPostCardProps {
   post: Post;
-  media?: {
-    source_url: string;
-  } | null;
-  category?: {
-    name: string;
-    id: number;
-  } | null;
+  coverUrl?: string | null;
+  category?: Category | null;
   className?: string;
   layout?: "horizontal" | "vertical";
 }
 
 export function FeaturedPostCard({
   post,
-  media,
+  coverUrl,
   category,
   className,
   layout = "vertical",
 }: FeaturedPostCardProps) {
-  const date = new Date(post.date).toLocaleDateString("zh-CN", {
+  const date = new Date(post.date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
   // estimate reading time
-  const readingTime = Math.ceil(
-    stripMarkdown(post.content.mdx).length / 300,
-  );
-
+  const readingTime = Math.ceil(stripMarkdown(post.content.mdx).length / 300);
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -53,9 +45,9 @@ export function FeaturedPostCard({
           layout === "horizontal" && "md:aspect-auto md:h-full",
         )}
       >
-        {media?.source_url ? (
+        {coverUrl ? (
           <Image
-            src={media.source_url}
+            src={coverUrl}
             alt={post.title?.rendered || "No Image"}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             fill
@@ -67,7 +59,7 @@ export function FeaturedPostCard({
           </div>
         )}
       </div>
-      <div className="space-y-4 p-6">
+      <div className="space-y-4 p-3">
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           {category && (
             <Badge variant="outline" className="rounded-full">

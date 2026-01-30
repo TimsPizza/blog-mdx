@@ -61,6 +61,7 @@ const CODE_BLOCK_INSERT: InsertableMarkdownItem = {
 
 const JSX_INSERTABLE_COMPONENTS = Object.values(MDX_COMPONENT_REGISTRY).flatMap(
   (definition): InsertableJsxComponent[] => {
+    if (definition.id === "Table") return [];
     const name = definition.descriptor.name ?? definition.id;
     if (!name) return [];
     return [

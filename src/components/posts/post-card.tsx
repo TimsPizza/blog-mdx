@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { getCategoryById, getFeaturedMediaById, type Post } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -11,7 +11,7 @@ export async function PostCard({ post }: { post: Post }) {
         () => null,
       )
     : null;
-  const date = new Date(post.date).toLocaleDateString("zh-CN", {
+  const date = new Date(post.date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",

@@ -1,6 +1,6 @@
 import { Container, Section } from "@/components/craft";
-import { PostsGrid, type ExtendedPost } from "@/components/posts/posts-grid";
-import { getAllCategories, getAllPosts, getFeaturedMediaById } from "@/lib/api";
+import { PostsGrid } from "@/components/posts/posts-grid";
+import { getAllCategories, getAllPosts } from "@/lib/api";
 import { notFound } from "next/navigation";
 
 type CategoryParams = {
@@ -36,26 +36,9 @@ export default async function CategoryPage({
     (items) => items,
     () => [],
   );
-  const hydratedPosts = await Promise.all(
-    posts.map(async (post) => {
-      const media = post.featured_media
-        ? await getFeaturedMediaById(post.featured_media).match(
-            (value) => value,
-            () => null,
-          )
-        : null;
-      const nextPost: ExtendedPost = post;
-      if (media) {
-        nextPost._media = media;
-      }
-      nextPost._category = { id: category.id, name: category.name };
-      return nextPost;
-    }),
-  );
-
-  const totalPages = Math.ceil(hydratedPosts.length / POSTS_PER_PAGE);
+  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
   const currentPage = Math.min(Math.max(1, page), totalPages || 1);
-  const paginatedPosts = hydratedPosts.slice(
+  const paginatedPosts = posts.slice(
     (currentPage - 1) * POSTS_PER_PAGE,
     currentPage * POSTS_PER_PAGE,
   );
@@ -76,6 +59,7 @@ export default async function CategoryPage({
           posts={paginatedPosts}
           currentPage={currentPage}
           totalPages={totalPages}
+          categories={categories}
         />
       </Container>
     </Section>

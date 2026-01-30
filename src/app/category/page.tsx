@@ -29,12 +29,14 @@ export default async function CategoryIndexPage() {
             >
               <span className="text-sm font-medium">{category.name}</span>
               <span className="text-muted-foreground text-xs">
-                {category.count} 篇
+                {category.count} {`post(s)`}
               </span>
             </Link>
           ))}
           {categories.length === 0 && (
-            <div className="text-muted-foreground text-sm">暂无分类</div>
+            <div className="text-muted-foreground text-sm">
+              No categories available
+            </div>
           )}
         </div>
       </Container>

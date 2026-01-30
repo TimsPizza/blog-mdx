@@ -9,6 +9,7 @@ import { type Post } from "@/lib/api";
 import { Calendar, Clock } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useRef } from "react";
+import { CommentsSection } from "./comments-section";
 import { ReadingProgress } from "./reading-progress";
 
 interface ArticleViewClientProps {
@@ -34,11 +35,12 @@ export function ArticleViewClient({
   children,
 }: ArticleViewClientProps) {
   const articleRef = useRef<HTMLDivElement | null>(null);
+  const articlePath = post.articlePath ?? `${post.slug}.mdx`;
 
   // estimate reading time
   const readingTime = Math.ceil(stripMarkdown(contentSource).length / 300);
 
-  const date = new Date(post.date).toLocaleDateString("zh-CN", {
+  const date = new Date(post.date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -94,6 +96,13 @@ export function ArticleViewClient({
               <div id="article-content" className="reading-prose">
                 {children}
               </div>
+            </AnimatedListItem>
+
+            <AnimatedListItem>
+              <CommentsSection
+                articleUid={post.articleUid}
+                articlePath={articlePath}
+              />
             </AnimatedListItem>
           </Container>
         </article>

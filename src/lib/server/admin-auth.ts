@@ -1,5 +1,5 @@
-import { createDrizzleFromEnv } from "@/lib/db/d1";
 import { sessions } from "@/lib/db/schema";
+import { requireDb } from "@/lib/util";
 import { AppError } from "@/types/error";
 import { eq } from "drizzle-orm";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
@@ -18,25 +18,24 @@ export async function requireAdminSession() {
     cookieStore.get("__Secure-next-auth.session-token")?.value ??
     cookieStore.get("__Host-next-auth.session-token")?.value;
   if (sessionToken) {
-    const db = createDrizzleFromEnv();
-    if (db) {
-      const row = await db
+    const dbResult = await requireDb();
+    if (dbResult.isOk()) {
+      const row = await dbResult.value
         .select()
         .from(sessions)
         .where(eq(sessions.session_token, sessionToken))
         .get();
-      if (row) {
-        const expires =
-          row.expires instanceof Date
-            ? row.expires.getTime()
-            : Number(row.expires);
-        if (!Number.isFinite(expires) || expires < Date.now()) return null;
-        if (row.user_id !== String(allowed)) return null;
-        return {
-          user: { id: String(allowed) },
-          expires: new Date(expires).toISOString(),
-        };
-      }
+      if (!row) return null;
+      const expires =
+        row.expires instanceof Date
+          ? row.expires.getTime()
+          : Number(row.expires);
+      if (!Number.isFinite(expires) || expires < Date.now()) return null;
+      if (row.user_id !== String(allowed)) return null;
+      return {
+        user: { id: String(allowed) },
+        expires: new Date(expires).toISOString(),
+      };
     }
   }
 

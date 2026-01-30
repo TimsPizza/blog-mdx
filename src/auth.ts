@@ -1,5 +1,5 @@
-import { createDrizzleFromEnv, type DrizzleDb } from "@/lib/db/d1";
 import { sessions } from "@/lib/db/schema";
+import { requireDb } from "@/lib/util";
 import { eq } from "drizzle-orm";
 import NextAuth, { type DefaultSession, type NextAuthOptions } from "next-auth";
 import type {
@@ -10,6 +10,7 @@ import type {
 } from "next-auth/adapters";
 import { getServerSession } from "next-auth/next";
 import GitHub from "next-auth/providers/github";
+import type { DrizzleDb } from "@/lib/db/d1";
 
 declare module "next-auth" {
   interface Session {
@@ -22,6 +23,11 @@ declare module "next-auth" {
 
 const allowedProfileId = process.env.GITHUB_PROFILE_ID;
 const adminUserId = allowedProfileId ? String(allowedProfileId) : "";
+const hasDbConfig = Boolean(
+  process.env.CLOUDFLARE_ACCOUNT_ID &&
+    process.env.CLOUDFLARE_D1_DATABASE_ID &&
+    process.env.CLOUDFLARE_API_TOKEN,
+);
 
 const buildAdminUser = (): AdapterUser | null => {
   if (!adminUserId) return null;
@@ -44,7 +50,15 @@ const toAdapterSession = (row: {
   expires: row.expires,
 });
 
-const createSingleAdminAdapter = (db: DrizzleDb): Adapter => ({
+const withDb = async <T>(fn: (db: DrizzleDb) => Promise<T>): Promise<T> =>
+  requireDb().match(
+    (db) => fn(db),
+    (error) => {
+      throw error;
+    },
+  );
+
+const createSingleAdminAdapter = (): Adapter => ({
   async createUser() {
     const user = buildAdminUser();
     if (!user) throw new Error("Missing admin user id.");
@@ -76,57 +90,65 @@ const createSingleAdminAdapter = (db: DrizzleDb): Adapter => ({
   },
   async deleteUser() {},
   async createSession(data) {
-    const expires =
-      data.expires instanceof Date ? data.expires : new Date(Date.now());
-    await db
-      .insert(sessions)
-      .values({
+    return withDb(async (db) => {
+      const expires =
+        data.expires instanceof Date ? data.expires : new Date(Date.now());
+      await db
+        .insert(sessions)
+        .values({
+          session_token: data.sessionToken,
+          user_id: data.userId,
+          expires,
+        })
+        .run();
+      return toAdapterSession({
         session_token: data.sessionToken,
         user_id: data.userId,
         expires,
-      })
-      .run();
-    return toAdapterSession({
-      session_token: data.sessionToken,
-      user_id: data.userId,
-      expires,
+      });
     });
   },
   async getSessionAndUser(sessionToken) {
-    const row = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.session_token, sessionToken))
-      .get();
-    if (!row) return null;
-    const user = buildAdminUser();
-    if (!user || row.user_id !== user.id) return null;
-    return {
-      session: toAdapterSession(row),
-      user,
-    };
+    return withDb(async (db) => {
+      const row = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.session_token, sessionToken))
+        .get();
+      if (!row) return null;
+      const user = buildAdminUser();
+      if (!user || row.user_id !== user.id) return null;
+      return {
+        session: toAdapterSession(row),
+        user,
+      };
+    });
   },
   async updateSession(data) {
-    if (!data.sessionToken) return null;
-    if (data.expires instanceof Date) {
-      await db
-        .update(sessions)
-        .set({ expires: data.expires })
+    return withDb(async (db) => {
+      if (!data.sessionToken) return null;
+      if (data.expires instanceof Date) {
+        await db
+          .update(sessions)
+          .set({ expires: data.expires })
+          .where(eq(sessions.session_token, data.sessionToken))
+          .run();
+      }
+      const row = await db
+        .select()
+        .from(sessions)
         .where(eq(sessions.session_token, data.sessionToken))
-        .run();
-    }
-    const row = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.session_token, data.sessionToken))
-      .get();
-    return row ? toAdapterSession(row) : null;
+        .get();
+      return row ? toAdapterSession(row) : null;
+    });
   },
   async deleteSession(sessionToken) {
-    await db
-      .delete(sessions)
-      .where(eq(sessions.session_token, sessionToken))
-      .run();
+    return withDb(async (db) => {
+      await db
+        .delete(sessions)
+        .where(eq(sessions.session_token, sessionToken))
+        .run();
+    });
   },
   async createVerificationToken(
     token: VerificationToken,
@@ -138,11 +160,7 @@ const createSingleAdminAdapter = (db: DrizzleDb): Adapter => ({
   },
 });
 
-const adapter = (() => {
-  const db = createDrizzleFromEnv();
-  if (!db) return undefined;
-  return createSingleAdminAdapter(db);
-})();
+const adapter = hasDbConfig ? createSingleAdminAdapter() : undefined;
 
 export const authOptions: NextAuthOptions = {
   adapter,

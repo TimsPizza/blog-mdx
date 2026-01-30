@@ -1,7 +1,7 @@
 import * as schema from "@/lib/db/schema";
 import { AppError } from "@/types/error";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
-import { err, ok, okAsync, ResultAsync } from "neverthrow";
+import { err, ok, ResultAsync } from "neverthrow";
 
 export type SqlParam = string | number | null;
 
@@ -168,101 +168,19 @@ function normalizeFromRows<T = D1ResultRow>(result: ColumnarResult): T[] {
   });
 }
 
-export class ViewsRepository {
-  constructor(private readonly db: D1Client | null) {}
-
-  increment(
-    articleUid: string,
-    articlePath: string,
-  ): ResultAsync<number | null, AppError> {
-    const db = this.db;
-    if (!db) return okAsync(null);
-    return db
-      .query<{ count: number }>(
-        "SELECT count FROM views WHERE article_uid = ?1",
-        [articleUid],
-      )
-      .andThen((rows) => {
-        const current = rows[0]?.count ?? 0;
-        const next = current + 1;
-        return db
-          .query(
-            "INSERT OR REPLACE INTO views (article_uid, article_path, count) VALUES (?1, ?2, ?3)",
-            [articleUid, articlePath, next],
-          )
-          .map(() => next);
-      });
-  }
-
-  getCount(articleUid: string): ResultAsync<number | null, AppError> {
-    const db = this.db;
-    if (!db) return okAsync(null);
-    return db
-      .query<{ count: number }>(
-        "SELECT count FROM views WHERE article_uid = ?1",
-        [articleUid],
-      )
-      .map((rows) => rows[0]?.count ?? 0);
-  }
-}
-
-export interface VisitRecord {
-  articlePath: string;
-  articleUid: string;
-  ip: string | null;
-  ua: string | null;
-  createdAt: string;
-}
-
-export class VisitsRepository {
-  constructor(private readonly db: D1Client | null) {}
-
-  recordVisit(
-    articlePath: string,
-    articleUid: string,
-    ip: string | null,
-    ua: string | null,
-  ): ResultAsync<void, AppError> {
-    const db = this.db;
-    if (!db) return okAsync(undefined);
-    return db
-      .query(
-        "INSERT INTO visits (article_path, article_uid, ip, ua, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
-        [articlePath, articleUid, ip, ua],
-      )
-      .map(() => undefined);
-  }
-}
-
-export interface LogRecord {
-  level: "info" | "warn" | "error";
-  message: string;
-  meta?: Record<string, unknown>;
-}
-
-export class LogsRepository {
-  constructor(private readonly db: D1Client | null) {}
-
-  write(log: LogRecord): ResultAsync<void, AppError> {
-    const db = this.db;
-    if (!db) return okAsync(undefined);
-    return db
-      .query(
-        "INSERT INTO logs (level, message, meta, created_at) VALUES (?1, ?2, ?3, datetime('now'))",
-        [log.level, log.message, JSON.stringify(log.meta ?? {})],
-      )
-      .map(() => undefined);
-  }
-}
+let cachedClient: D1Client | null | undefined;
 
 export function createD1ClientFromEnv(): D1Client | null {
+  if (cachedClient !== undefined) return cachedClient;
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !databaseId || !apiToken) {
-    return null;
+    cachedClient = null;
+    return cachedClient;
   }
-  return new D1Client({ accountId, databaseId, apiToken });
+  cachedClient = new D1Client({ accountId, databaseId, apiToken });
+  return cachedClient;
 }
 
 export function createDrizzle(client: D1Client | null) {

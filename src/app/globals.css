@@ -265,6 +265,29 @@
 }
 
 @layer components {
+  .reveal-item {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 420ms ease,
+      transform 520ms ease;
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .reveal-item.reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-item,
+    .reveal-item.reveal-visible {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
   .nav-item {
     @apply text-lg font-medium text-secondary-foreground hover:text-primary transition-colors relative;
   }
