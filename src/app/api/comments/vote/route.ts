@@ -1,6 +1,6 @@
 import { CommentsRepository } from "@/lib/db/comments-repo";
-import { AppError } from "@/types/error";
 import { isRecord, requireDb, stringValue } from "@/lib/util";
+import { AppError } from "@/types/error";
 import { errAsync, ResultAsync } from "neverthrow";
 import { NextResponse } from "next/server";
 
@@ -34,13 +34,11 @@ const respondError = (error: AppError): NextResponse<ErrorResponse> => (
 
 export async function POST(request: Request) {
   const result = requireDb().andThen((db) =>
-    ResultAsync.fromPromise(
-      request.json() as Promise<unknown>,
-      (error) =>
-        AppError.fromUnknown(error, {
-          tag: "VALIDATION",
-          message: "Invalid JSON payload",
-        }),
+    ResultAsync.fromPromise(request.json() as Promise<unknown>, (error) =>
+      AppError.fromUnknown(error, {
+        tag: "VALIDATION",
+        message: "Invalid JSON payload",
+      }),
     ).andThen((body) => {
       if (!isRecord(body)) {
         return errAsync(AppError.invalidRequest("Invalid payload"));
@@ -61,7 +59,7 @@ export async function POST(request: Request) {
       }
       const repo = new CommentsRepository(db);
       return repo.incrementVote(id, direction).map((row) => ({
-        ok: true,
+        ok: true as const,
         data: { id, upvotes: row.upvotes ?? 0, downvotes: row.downvotes ?? 0 },
       }));
     }),
