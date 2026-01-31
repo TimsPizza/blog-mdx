@@ -4,6 +4,7 @@ const ADMIN_LINKS = [
   { href: "/admin/article", label: "Articles" },
   { href: "/admin/category", label: "Categories" },
   { href: "/admin/comments", label: "Comments" },
+  { href: "/admin/visits", label: "Visits" },
   { href: "/admin/subscribers", label: "Subscribers" },
 ];
 

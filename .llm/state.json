@@ -1,13 +1,10 @@
 {
-  "completed_task_counter": 135,
-  "last_snapshot_commit": "946132e86781503185177231e08714d5afc65b52",
-  "last_impl_index": 40,
-  "last_impl_time": "2026-01-29T23:24:58Z",
+  "completed_task_counter": 139,
+  "last_snapshot_commit": "6c52bc4619960fd1b4d2fac32ce68f56d21c2048",
+  "last_impl_index": 41,
+  "last_impl_time": "2026-01-31T05:51:42Z",
   "pending_tasks": [],
   "done_tasks_since_last_impl": [
-    "Add subscribe feature toggle for public signup",
-    "Default subscribe toggle to off",
-    "Replace views with visits-based ORM stats",
-    "Move visit tracking to post page render"
+    "Add admin visits page with filters"
   ]
 }

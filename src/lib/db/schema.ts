@@ -132,3 +132,4 @@ export type NewNewsletterSubscriber = InferInsertModel<
 >;
 export type NewsletterQueueItem = InferSelectModel<typeof newsletter_queue>;
 export type NewNewsletterQueueItem = InferInsertModel<typeof newsletter_queue>;
+export type Visit = InferSelectModel<typeof visits>;

@@ -1,9 +1,9 @@
 import { stripMarkdown } from "@/components/mdx/heading-utils";
+import { CoverImage } from "@/components/posts/cover-image";
 import { Badge } from "@/components/ui/badge";
 import { type Category, type Post } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
 interface FeaturedPostCardProps {
@@ -39,27 +39,28 @@ export function FeaturedPostCard({
         className,
       )}
     >
-      <div
-        className={cn(
-          "relative aspect-video overflow-hidden",
-          layout === "horizontal" && "md:aspect-auto md:h-full",
-        )}
-      >
-        {coverUrl ? (
-          <Image
-            src={coverUrl}
-            alt={post.title?.rendered || "No Image"}
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            fill
-            priority
-          />
-        ) : (
-          <div className="bg-muted flex h-full items-center justify-center">
-            No Image
-          </div>
-        )}
-      </div>
-      <div className="space-y-4 p-3">
+      {coverUrl ? (
+        <CoverImage
+          src={coverUrl}
+          alt={post.title?.rendered || "No Image"}
+          fill
+          priority
+          containerClassName={cn(
+            "relative aspect-video overflow-hidden",
+            layout === "horizontal" && "md:aspect-auto md:h-full",
+          )}
+        />
+      ) : (
+        <div
+          className={cn(
+            "bg-muted flex aspect-video items-center justify-center",
+            layout === "horizontal" && "md:aspect-auto md:h-full",
+          )}
+        >
+          No Image
+        </div>
+      )}
+      <div className="border-accent/10 space-y-4 border-t p-3">
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           {category && (
             <Badge variant="outline" className="rounded-full">

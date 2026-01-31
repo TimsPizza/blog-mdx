@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { getCategoryById, getFeaturedMediaById, type Post } from "@/lib/api";
+import { CoverImage } from "@/components/posts/cover-image";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import Link from "next/link";
 
 export async function PostCard({ post }: { post: Post }) {
@@ -33,21 +33,19 @@ export async function PostCard({ post }: { post: Post }) {
       )}
     >
       <div className="flex flex-col gap-4">
-        <div className="bg-muted relative flex h-48 w-full items-center justify-center overflow-hidden rounded-md border">
-          {media?.source_url ? (
-            <Image
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              src={media.source_url}
-              alt={post.title?.rendered || "No Image"}
-              width={400}
-              height={200}
-            />
-          ) : (
-            <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-              No Image
-            </div>
-          )}
-        </div>
+        {media?.source_url ? (
+          <CoverImage
+            src={media.source_url}
+            alt={post.title?.rendered || "No Image"}
+            width={400}
+            height={200}
+            containerClassName="bg-muted relative h-48 w-full overflow-hidden rounded-md border"
+          />
+        ) : (
+          <div className="bg-muted text-muted-foreground flex h-48 w-full items-center justify-center rounded-md border">
+            No Image
+          </div>
+        )}
         <div>
           <div
             dangerouslySetInnerHTML={{

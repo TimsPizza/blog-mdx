@@ -304,6 +304,7 @@ export class GitHubContentStore {
   private readonly cacheTtlMs: number;
   private readonly fileCache: ReadCache<{ content: string; sha: string }>;
   private readonly dirCache: ReadCache<GitHubFileEntry[]>;
+  private lastCacheRefreshAt: number;
 
   constructor(config: GitHubContentStoreConfig) {
     this.owner = config.owner;
@@ -320,6 +321,7 @@ export class GitHubContentStore {
       ttlMs: this.cacheTtlMs,
       logPrefix: "article-dir",
     });
+    this.lastCacheRefreshAt = Date.now();
   }
 
   listAllCategories(): ResultAsync<string[], AppError> {
@@ -665,6 +667,7 @@ export class GitHubContentStore {
   private listDirectory(
     path: string,
   ): ResultAsync<GitHubFileEntry[], AppError> {
+    this.refreshCachesIfStale();
     const normalized = normalizePath(path);
     const cached = this.dirCache.get(normalized);
     if (cached) {
@@ -700,6 +703,7 @@ export class GitHubContentStore {
   private readFile(
     path: string,
   ): ResultAsync<{ content: string; sha: string }, AppError> {
+    this.refreshCachesIfStale();
     const normalized = normalizePath(path);
     const cached = this.fileCache.get(normalized);
     if (cached) {
@@ -814,5 +818,14 @@ export class GitHubContentStore {
     const dir = normalized.split("/").slice(0, -1).join("/");
     this.dirCache.invalidate(dir);
     this.dirCache.invalidate(this.docsPath);
+  }
+
+  private refreshCachesIfStale() {
+    if (this.cacheTtlMs <= 0) return;
+    const now = Date.now();
+    if (now - this.lastCacheRefreshAt < this.cacheTtlMs) return;
+    this.lastCacheRefreshAt = now;
+    this.fileCache.clear();
+    this.dirCache.clear();
   }
 }

@@ -45,4 +45,11 @@ export class ReadCache<T> {
     }
     this.store.delete(key);
   }
+
+  clear(): void {
+    if (this.logPrefix) {
+      console.log(`[${this.logPrefix}] clear`);
+    }
+    this.store.clear();
+  }
 }
