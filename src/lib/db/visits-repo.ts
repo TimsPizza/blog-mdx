@@ -76,7 +76,7 @@ export class VisitsRepository {
       conditions.push(lte(visits.createdAt, filters.to));
     }
 
-    let query = this.db.select().from(visits);
+    let query = this.db.select().from(visits).$dynamic();
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
