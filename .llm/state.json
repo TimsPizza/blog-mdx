@@ -1,8 +1,11 @@
 {
-  "completed_task_counter": 141,
+  "completed_task_counter": 143,
   "last_snapshot_commit": "0a23c820abde63cb75c637b21bbd7eb3b5e0aef2",
   "last_impl_index": 42,
   "last_impl_time": "2026-04-13T03:41:09Z",
   "pending_tasks": [],
-  "done_tasks_since_last_impl": []
+  "done_tasks_since_last_impl": [
+    "Restore strong/em styling in blog MDX rendering",
+    "Audit and restore Markdown semantics in blog typography"
+  ]
 }
