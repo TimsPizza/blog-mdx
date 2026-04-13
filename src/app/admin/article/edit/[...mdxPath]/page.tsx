@@ -1,5 +1,6 @@
 import ArticleEditor from "@/components/admin/article-editor";
 import { getContentStore } from "@/lib/server/content-store";
+import { decodeUrlPathSegments } from "@/lib/utils";
 import { errAsync } from "neverthrow";
 
 export default async function ArticleEditPage({
@@ -8,7 +9,8 @@ export default async function ArticleEditPage({
   params: Promise<{ mdxPath: string[] }>; // e.g., ["category", "my-first-article"]
 }) {
   const resolvedParams = await params;
-  const origMdxPath = resolvedParams.mdxPath?.join("/") ?? "";
+  const origMdxPath =
+    decodeUrlPathSegments(resolvedParams.mdxPath ?? []).join("/") ?? "";
   if (!origMdxPath) {
     return (
       <div className="p-8">

@@ -2,6 +2,7 @@ import { ArticleViewServer } from "@/components/posts/article-view-server";
 import { getAllPosts, getCategoryById, getFeaturedMediaById } from "@/lib/api";
 import { VisitsRepository } from "@/lib/db/visits-repo";
 import { getClientIp, requireDb } from "@/lib/util";
+import { decodeUrlPathSegments } from "@/lib/utils";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -15,7 +16,9 @@ export default async function PostPage({
   params: Promise<PostParams>;
 }) {
   const { mdxFullPath } = await params;
-  const slugPath = mdxFullPath.join("/").replace(/\.mdx?$/i, "");
+  const slugPath = decodeUrlPathSegments(mdxFullPath)
+    .join("/")
+    .replace(/\.mdx?$/i, "");
 
   const posts = await getAllPosts().match(
     (items) => items,
