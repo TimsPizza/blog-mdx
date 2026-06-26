@@ -1,4 +1,5 @@
 import { requireAdminResult } from "@/lib/server/admin-auth";
+import { revalidateContentRoutes } from "@/lib/server/content-revalidation";
 import { getContentStore, listDocuments } from "@/lib/server/content-store";
 import { enqueueArticleForNewsletter } from "@/lib/server/newsletter";
 import { mapDocToPost } from "@/lib/server/posts";
@@ -327,7 +328,12 @@ export async function POST(request: Request) {
     });
 
   return result.match(
-    (data) => respondOk(requestId, data),
+    (data) => {
+      if (opForLog && MUTATING_OPS.has(opForLog as ArticleOp)) {
+        revalidateContentRoutes();
+      }
+      return respondOk(requestId, data);
+    },
     (error) => respondError(requestId, error, { op: opForLog }),
   );
 }

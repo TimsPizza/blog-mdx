@@ -1,8 +1,10 @@
 {
-  "completed_task_counter": 144,
+  "completed_task_counter": 145,
   "last_snapshot_commit": "932edcbdfd20baeeec17454fd69447ae9fc29f7e",
   "last_impl_index": 43,
   "last_impl_time": "2026-06-26T22:52:40Z",
   "pending_tasks": [],
-  "done_tasks_since_last_impl": []
+  "done_tasks_since_last_impl": [
+    "Fix content route cache invalidation after article and category mutations"
+  ]
 }

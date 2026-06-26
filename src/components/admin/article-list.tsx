@@ -115,6 +115,7 @@ export default function ArticleAdminClient({
       );
       setSelected(new Set());
       await refreshList();
+      router.refresh();
     } catch (err) {
       console.error(`Bulk ${op} failed`, err);
     } finally {
@@ -148,6 +149,7 @@ export default function ArticleAdminClient({
       );
       setSelected(new Set());
       await refreshList();
+      router.refresh();
     } catch (err) {
       console.error("Bulk delete failed", err);
     } finally {

@@ -5,6 +5,7 @@ import {
   type ArticleDraftData,
   useArticleDraftStore,
 } from "@/lib/stores/article-draft";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type ArticleEditorProps = {
@@ -102,6 +103,7 @@ export function useArticleEditorController({
   isNewArticle,
   initialDoc,
 }: ArticleEditorProps): ArticleEditorController {
+  const router = useRouter();
   const initialTimestamp = useMemo(() => nowSeconds(), []);
   const basePath = initialDoc?.path ?? "";
   const { category: baseCategoryFromPath, fileStem: baseFileStem } = useMemo(
@@ -198,8 +200,11 @@ export function useArticleEditorController({
 
   useEffect(() => {
     if (!draftEntry || hydratedRef.current) return;
-    setDraftData(normalizeDraft(draftEntry.data));
     hydratedRef.current = true;
+    const timeout = setTimeout(() => {
+      setDraftData(normalizeDraft(draftEntry.data));
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [draftEntry, normalizeDraft]);
 
   useEffect(() => {
@@ -340,6 +345,7 @@ export function useArticleEditorController({
     } else {
       commitDraft(draftKey, draftData);
     }
+    router.refresh();
     setSaving(false);
   }, [
     baseInfo,
@@ -352,6 +358,7 @@ export function useArticleEditorController({
     isNewArticle,
     preservedMeta.status,
     preservedMeta.tags,
+    router,
     saving,
     sha,
   ]);

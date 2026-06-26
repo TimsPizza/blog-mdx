@@ -4,6 +4,7 @@ import {
   listDocuments,
 } from "@/lib/server/content-store";
 import { requireAdminResult } from "@/lib/server/admin-auth";
+import { revalidateContentRoutes } from "@/lib/server/content-revalidation";
 import { jsonError } from "@/lib/server/http";
 import { AppError } from "@/types/error";
 import { err, errAsync, ResultAsync } from "neverthrow";
@@ -58,10 +59,10 @@ export async function POST(request: Request) {
         );
       }),
     )
-    .match(
-      (payload) => NextResponse.json(payload),
-      jsonError,
-    );
+    .match((payload) => {
+      revalidateContentRoutes();
+      return NextResponse.json(payload);
+    }, jsonError);
 }
 
 export async function DELETE(request: Request) {
@@ -146,8 +147,8 @@ export async function DELETE(request: Request) {
         );
       }),
     )
-    .match(
-      (payload) => NextResponse.json(payload),
-      jsonError,
-    );
+    .match((payload) => {
+      revalidateContentRoutes();
+      return NextResponse.json(payload);
+    }, jsonError);
 }

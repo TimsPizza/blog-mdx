@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type ArticleSummary = {
@@ -13,6 +14,7 @@ type ArticleSummary = {
 const DEFAULT_CATEGORY = "default";
 
 export default function AdminCategoryPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -80,6 +82,7 @@ export default function AdminCategoryPage() {
       }
       setNewCategory("");
       await refreshCategories();
+      router.refresh();
     } catch (err) {
       console.error("Failed to create category", err);
       setError("创建分类失败");
@@ -135,6 +138,7 @@ export default function AdminCategoryPage() {
       setDialogCategory(null);
       setDialogDocs([]);
       await refreshCategories();
+      router.refresh();
     } catch (err) {
       console.error("Failed to delete category", err);
       setError("删除分类失败");
