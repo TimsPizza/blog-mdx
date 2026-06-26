@@ -291,7 +291,7 @@
 }
 
 @layer components {
-  .reveal-item {
+  .reveal-scope.reveal-ready > .reveal-item {
     opacity: 0;
     transform: translateY(24px);
     transition:
@@ -300,14 +300,14 @@
     transition-delay: var(--reveal-delay, 0ms);
   }
 
-  .reveal-item.reveal-visible {
+  .reveal-scope.reveal-ready > .reveal-item.reveal-visible {
     opacity: 1;
     transform: translateY(0);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .reveal-item,
-    .reveal-item.reveal-visible {
+    .reveal-scope.reveal-ready > .reveal-item,
+    .reveal-scope.reveal-ready > .reveal-item.reveal-visible {
       opacity: 1;
       transform: none;
       transition: none;
