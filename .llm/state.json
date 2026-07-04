@@ -1,8 +1,11 @@
 {
-  "completed_task_counter": 150,
+  "completed_task_counter": 152,
   "last_snapshot_commit": "e50c1d81834956b60357bde2ee970c1c548edfee",
   "last_impl_index": 45,
   "last_impl_time": "2026-07-04T19:51:34Z",
   "pending_tasks": [],
-  "done_tasks_since_last_impl": []
+  "done_tasks_since_last_impl": [
+    "Add cached App Router view transitions without changing route rendering",
+    "Replace experimental view transitions with stable template route animations"
+  ]
 }

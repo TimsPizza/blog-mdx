@@ -10,7 +10,6 @@ import {
 import { Container, Section } from "@/components/craft";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { mainMenu, siteConfig } from "@/components/nav/nav.config";
-import { PageReveal } from "@/components/ui/page-reveal";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
@@ -70,7 +69,7 @@ export default function RootLayout({
           <main className="flex min-h-screen w-full flex-col">
             <Nav className={`${lxgw.className} text-lg font-bold`} />
             <div id="content-wrapper" className="min-h-screen flex-1">
-              <PageReveal>{children}</PageReveal>
+              {children}
             </div>
             <Footer />
           </main>
