@@ -1,10 +1,14 @@
 import { Badge } from "@/components/ui/badge";
-import { getCategoryById, getFeaturedMediaById, type Post } from "@/lib/api";
+import {
+  getCategoryById,
+  getFeaturedMediaById,
+  type PostSummary,
+} from "@/lib/api";
 import { CoverImage } from "@/components/posts/cover-image";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-export async function PostCard({ post }: { post: Post }) {
+export async function PostCard({ post }: { post: PostSummary }) {
   const media = post.featured_media
     ? await getFeaturedMediaById(post.featured_media).match(
         (value) => value,

@@ -1,11 +1,11 @@
 import { Section } from "@/components/craft";
-import { getAllPosts } from "@/lib/api";
+import { getPostListingData } from "@/lib/api";
 import { ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
 
 export async function FeaturedPosts() {
-  const posts = await getAllPosts().match(
-    (items) => items.slice(0, 4),
+  const posts = await getPostListingData().match(
+    (data) => data.posts.slice(0, 4),
     () => [],
   );
 

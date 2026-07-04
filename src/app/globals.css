@@ -291,26 +291,23 @@
 }
 
 @layer components {
-  .reveal-scope.reveal-ready > .reveal-item {
-    opacity: 0;
-    transform: translateY(24px);
-    transition:
-      opacity 420ms ease,
-      transform 520ms ease;
-    transition-delay: var(--reveal-delay, 0ms);
+  .reveal-scope {
+    animation: page-reveal-enter 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .reveal-scope.reveal-ready > .reveal-item.reveal-visible {
-    opacity: 1;
-    transform: translateY(0);
+  @keyframes page-reveal-enter {
+    from {
+      transform: translateY(8px);
+    }
+
+    to {
+      transform: translateY(0);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .reveal-scope.reveal-ready > .reveal-item,
-    .reveal-scope.reveal-ready > .reveal-item.reveal-visible {
-      opacity: 1;
-      transform: none;
-      transition: none;
+    .reveal-scope {
+      animation: none;
     }
   }
 

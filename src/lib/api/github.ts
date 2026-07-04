@@ -352,6 +352,11 @@ export class GitHubContentStore {
     );
   }
 
+  listDocsWithContentFresh(): ResultAsync<MdxDocument[], AppError> {
+    this.clearReadCaches();
+    return this.listDocsWithContent();
+  }
+
   getDoc(pathToMdxFile: string): ResultAsync<MdxDocument, AppError> {
     const resolvedPath = this.resolveDocPath(pathToMdxFile);
     return this.readFile(resolvedPath).map((file) => {
@@ -364,6 +369,11 @@ export class GitHubContentStore {
         sha: file.sha,
       };
     });
+  }
+
+  getDocFresh(pathToMdxFile: string): ResultAsync<MdxDocument, AppError> {
+    this.invalidateFile(this.resolveDocPath(pathToMdxFile));
+    return this.getDoc(pathToMdxFile);
   }
 
   upsertDoc(
@@ -820,12 +830,16 @@ export class GitHubContentStore {
     this.dirCache.invalidate(this.docsPath);
   }
 
+  private clearReadCaches() {
+    this.fileCache.clear();
+    this.dirCache.clear();
+    this.lastCacheRefreshAt = Date.now();
+  }
+
   private refreshCachesIfStale() {
     if (this.cacheTtlMs <= 0) return;
     const now = Date.now();
     if (now - this.lastCacheRefreshAt < this.cacheTtlMs) return;
-    this.lastCacheRefreshAt = now;
-    this.fileCache.clear();
-    this.dirCache.clear();
+    this.clearReadCaches();
   }
 }

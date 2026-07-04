@@ -81,6 +81,23 @@ export function listDocuments(): ResultAsync<MdxDocument[], AppError> {
   );
 }
 
+export function listDocumentsFresh(): ResultAsync<MdxDocument[], AppError> {
+  return getContentStore().match(
+    (store) => store.listDocsWithContentFresh(),
+    (error) => errAsync(error),
+  );
+}
+
+export function getDocument(
+  path: string,
+  options: { fresh?: boolean } = {},
+): ResultAsync<MdxDocument, AppError> {
+  return getContentStore().match(
+    (store) => (options.fresh ? store.getDocFresh(path) : store.getDoc(path)),
+    (error) => errAsync(error),
+  );
+}
+
 export function listAllCategories(): ResultAsync<string[], AppError> {
   return getContentStore().match(
     (store) => store.listAllCategories(),

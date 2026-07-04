@@ -4,63 +4,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Category } from "@/lib/api";
 import { Filter, Search } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface SearchFilterProps {
   categories: Category[];
+  category: string;
+  search: string;
+  sort: string;
+  onCategoryChange: (category: string) => void;
+  onReset: () => void;
+  onSearch: (search: string) => void;
+  onSortChange: (sort: string) => void;
 }
 
-export function SearchFilter({ categories }: SearchFilterProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function SearchFilter({
+  categories,
+  category,
+  search,
+  sort,
+  onCategoryChange,
+  onReset,
+  onSearch,
+  onSortChange,
+}: SearchFilterProps) {
+  const [searchQuery, setSearchQuery] = useState(search);
 
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "date");
-
-  const createQueryString = useCallback(
-    (params: Record<string, string | null>) => {
-      const newSearchParams = new URLSearchParams(searchParams.toString());
-
-      Object.entries(params).forEach(([key, value]) => {
-        if (value === null) {
-          newSearchParams.delete(key);
-        } else {
-          newSearchParams.set(key, value);
-        }
-      });
-
-      return newSearchParams.toString();
-    },
-    [searchParams],
-  );
-
-  const handleSearch = () => {
-    const query = createQueryString({
-      q: searchQuery || null,
-      sort: sortBy,
-    });
-    router.push(`/posts?${query}`);
-  };
-
-  const handleSort = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortBy(e.target.value);
-    const query = createQueryString({
-      q: searchQuery || null,
-      sort: e.target.value,
-      category: searchParams.get("category"),
-    });
-    router.push(`/posts?${query}`);
-  };
-
-  const handleCategory = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const query = createQueryString({
-      q: searchQuery || null,
-      sort: sortBy,
-      category: e.target.value || null,
-    });
-    router.push(`/posts?${query}`);
-  };
+  useEffect(() => {
+    setSearchQuery(search);
+  }, [search]);
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-end">
@@ -73,9 +44,14 @@ export function SearchFilter({ categories }: SearchFilterProps) {
             placeholder="Enter keywords to search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") onSearch(searchQuery);
+            }}
           />
-          <Button onClick={handleSearch}>
+          <Button
+            aria-label="Search posts"
+            onClick={() => onSearch(searchQuery)}
+          >
             <Search className="h-4 w-4" />
           </Button>
         </div>
@@ -88,8 +64,8 @@ export function SearchFilter({ categories }: SearchFilterProps) {
           </label>
           <select
             className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            value={sortBy}
-            onChange={handleSort}
+            value={sort}
+            onChange={(event) => onSortChange(event.target.value)}
           >
             <option value="date">Publish Time - Newest</option>
             <option value="date-asc">Publish Time - Oldest</option>
@@ -104,8 +80,8 @@ export function SearchFilter({ categories }: SearchFilterProps) {
           </label>
           <select
             className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            value={searchParams.get("category") || ""}
-            onChange={handleCategory}
+            value={category}
+            onChange={(event) => onCategoryChange(event.target.value)}
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
@@ -121,8 +97,7 @@ export function SearchFilter({ categories }: SearchFilterProps) {
           className="mt-auto"
           onClick={() => {
             setSearchQuery("");
-            setSortBy("date");
-            router.push("/posts");
+            onReset();
           }}
         >
           <Filter className="mr-2 h-4 w-4" />

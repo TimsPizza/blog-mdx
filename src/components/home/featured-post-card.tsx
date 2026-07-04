@@ -1,13 +1,12 @@
-import { stripMarkdown } from "@/components/mdx/heading-utils";
 import { CoverImage } from "@/components/posts/cover-image";
 import { Badge } from "@/components/ui/badge";
-import { type Category, type Post } from "@/lib/api";
+import { type Category, type PostSummary } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 
 interface FeaturedPostCardProps {
-  post: Post;
+  post: PostSummary;
   coverUrl?: string | null;
   category?: Category | null;
   className?: string;
@@ -27,8 +26,6 @@ export function FeaturedPostCard({
     day: "numeric",
   });
 
-  // estimate reading time
-  const readingTime = Math.ceil(stripMarkdown(post.content.mdx).length / 300);
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -90,7 +87,7 @@ export function FeaturedPostCard({
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            <span>{` ${readingTime} minute(s)`}</span>
+            <span>{` ${post.readingTimeMinutes} minute(s)`}</span>
           </div>
         </div>
       </div>

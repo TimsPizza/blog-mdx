@@ -1,14 +1,25 @@
 import { ArticleViewServer } from "@/components/posts/article-view-server";
-import { getAllPosts, getCategoryById, getFeaturedMediaById } from "@/lib/api";
-import { VisitsRepository } from "@/lib/db/visits-repo";
-import { getClientIp, requireDb } from "@/lib/util";
+import {
+  getFeaturedMediaById,
+  getPostByPath,
+  getPostListingData,
+} from "@/lib/api";
 import { decodeUrlPathSegments } from "@/lib/utils";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 type PostParams = {
   mdxFullPath: string[];
 };
+
+export const dynamicParams = true;
+
+export async function generateStaticParams(): Promise<PostParams[]> {
+  return getPostListingData().match(
+    ({ posts }) =>
+      posts.map((post) => ({ mdxFullPath: post.slug.split("/") })),
+    () => [],
+  );
+}
 
 export default async function PostPage({
   params,
@@ -20,46 +31,18 @@ export default async function PostPage({
     .join("/")
     .replace(/\.mdx?$/i, "");
 
-  const posts = await getAllPosts().match(
-    (items) => items,
-    () => [],
+  const article = await getPostByPath(slugPath, { fresh: true }).match(
+    (value) => value,
+    () => null,
   );
-  const post = posts.find((item) => item.slug === slugPath);
-  if (!post) notFound();
-
-  const category = post.categories?.[0]
-    ? await getCategoryById(post.categories[0]).match(
-        (value) => value,
-        () => null,
-      )
-    : null;
+  if (!article) notFound();
+  const { post, category } = article;
   const media = post.featured_media
     ? await getFeaturedMediaById(post.featured_media).match(
         (value) => value,
         () => null,
       )
     : null;
-
-  if (post.articleUid && post.articlePath) {
-    const headerStore = await headers();
-    const ip = getClientIp(
-      new Request("http://localhost", { headers: headerStore }),
-    );
-    const ua = headerStore.get("user-agent");
-    await requireDb()
-      .andThen((db) =>
-        new VisitsRepository(db).recordVisit({
-          articlePath: post.articlePath ?? slugPath,
-          articleUid: post.articleUid ?? "",
-          ip: ip ?? null,
-          ua: ua ?? null,
-        }),
-      )
-      .match(
-        () => undefined,
-        () => undefined,
-      );
-  }
 
   return <ArticleViewServer post={post} category={category} media={media} />;
 }

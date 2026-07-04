@@ -1,21 +1,29 @@
 import { type MdxDocument } from "@/lib/api/types";
-import { listDocuments } from "@/lib/server/content-store";
+import {
+  getDocument,
+  listDocuments,
+  listDocumentsFresh,
+} from "@/lib/server/content-store";
 import { AppError } from "@/types/error";
 import { okAsync, type ResultAsync } from "neverthrow";
 
-export interface Post {
+export interface PostSummary {
   id: string;
   slug: string;
   articleUid?: string;
   articlePath?: string;
   title: { rendered: string };
   excerpt: { rendered: string };
-  content: { mdx: string };
   date: string;
   categories?: number[];
   tags?: string[];
   featured_media?: string | null;
   meta?: { views?: number };
+  readingTimeMinutes: number;
+}
+
+export interface Post extends PostSummary {
+  content: { mdx: string };
 }
 
 export interface Category {
@@ -29,50 +37,56 @@ function fetchDocs(): ResultAsync<MdxDocument[], AppError> {
   return listDocuments();
 }
 
+function fetchFreshDocs(): ResultAsync<MdxDocument[], AppError> {
+  return listDocumentsFresh();
+}
+
 export function getAllPosts(params?: {
   search?: string;
   category?: number | string;
   tag?: string;
   status?: "draft" | "published" | "archived";
 }): ResultAsync<Post[], AppError> {
-  return fetchDocs().map((docs) => {
-    const categories = buildCategoryMap(docs);
+  return fetchDocs().map((docs) => mapDocsToPosts(docs, params));
+}
 
-    let filteredDocs = docs;
-    if (params?.status) {
-      filteredDocs = docs.filter(
-        (doc) => docStatusFromFrontmatter(doc.meta) === params.status,
-      );
-    }
+export function getPostListingData(
+  options: { fresh?: boolean } = {},
+): ResultAsync<
+  { posts: PostSummary[]; categories: Category[] },
+  AppError
+> {
+  const docs = options.fresh ? fetchFreshDocs() : fetchDocs();
+  return docs.map((items) => {
+    const categoryMap = buildCategoryMap(items);
+    return {
+      posts: mapDocsToPosts(items).map(toPostSummary),
+      categories: Array.from(categoryMap.values()),
+    };
+  });
+}
 
-    let posts = filteredDocs.map((doc) => mdxToPost(doc, categories));
-
-    if (params?.search) {
-      const query = params.search.toLowerCase();
-      posts = posts.filter(
-        (post) =>
-          post.title.rendered.toLowerCase().includes(query) ||
-          post.excerpt.rendered.toLowerCase().includes(query),
-      );
-    }
-
-    if (params?.category) {
-      const catId = Number(params.category);
-      posts = posts.filter((post) => post.categories?.includes(catId));
-    }
-
-    if (params?.tag) {
-      const tag = params.tag.toLowerCase();
-      posts = posts.filter((post) =>
-        post.tags?.some((t) => t.toLowerCase() === tag),
-      );
-    }
-
-    posts.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
-
-    return posts;
+export function getPostByPath(
+  path: string,
+  options: { fresh?: boolean } = {},
+): ResultAsync<{ post: Post; category: Category | null }, AppError> {
+  return getDocument(path, options).map((doc) => {
+    const categorySlug = stripMdxExtension(doc.path).split("/")[0];
+    const category = categorySlug
+      ? {
+          id: 1,
+          name: categorySlug,
+          path: categorySlug,
+          count: 1,
+        }
+      : null;
+    const categories = category
+      ? new Map<string, Category>([[category.path, category]])
+      : new Map<string, Category>();
+    return {
+      post: mdxToPost(doc, categories),
+      category,
+    };
   });
 }
 
@@ -133,6 +147,74 @@ function mdxToPost(doc: MdxDocument, categories: Map<string, Category>): Post {
     categories: categoryIds,
     tags: tagList,
     featured_media: cover,
+    readingTimeMinutes: Math.max(
+      1,
+      Math.ceil(stripMarkdown(doc.content).length / 300),
+    ),
+  };
+}
+
+function mapDocsToPosts(
+  docs: MdxDocument[],
+  params?: {
+    search?: string;
+    category?: number | string;
+    tag?: string;
+    status?: "draft" | "published" | "archived";
+  },
+): Post[] {
+  const categories = buildCategoryMap(docs);
+  let filteredDocs = docs;
+
+  if (params?.status) {
+    filteredDocs = docs.filter(
+      (doc) => docStatusFromFrontmatter(doc.meta) === params.status,
+    );
+  }
+
+  let posts = filteredDocs.map((doc) => mdxToPost(doc, categories));
+
+  if (params?.search) {
+    const query = params.search.toLowerCase();
+    posts = posts.filter(
+      (post) =>
+        post.title.rendered.toLowerCase().includes(query) ||
+        post.excerpt.rendered.toLowerCase().includes(query),
+    );
+  }
+
+  if (params?.category) {
+    const catId = Number(params.category);
+    posts = posts.filter((post) => post.categories?.includes(catId));
+  }
+
+  if (params?.tag) {
+    const tag = params.tag.toLowerCase();
+    posts = posts.filter((post) =>
+      post.tags?.some((item) => item.toLowerCase() === tag),
+    );
+  }
+
+  posts.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  return posts;
+}
+
+function toPostSummary(post: Post): PostSummary {
+  return {
+    id: post.id,
+    slug: post.slug,
+    articleUid: post.articleUid,
+    articlePath: post.articlePath,
+    title: post.title,
+    excerpt: post.excerpt,
+    date: post.date,
+    categories: post.categories,
+    tags: post.tags,
+    featured_media: post.featured_media,
+    meta: post.meta,
+    readingTimeMinutes: post.readingTimeMinutes,
   };
 }
 
@@ -203,6 +285,17 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function stripMarkdown(source: string): string {
+  return source
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[#>*_~|-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function docStatusFromFrontmatter(

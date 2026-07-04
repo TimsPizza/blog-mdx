@@ -3,6 +3,7 @@
 import { AnimatedListItem } from "@/components/animations/animated-section";
 import { Container } from "@/components/craft";
 import { stripMarkdown } from "@/components/mdx/heading-utils";
+import { ArticleVisitTracker } from "@/components/posts/article-visit-tracker";
 import { TableOfContents } from "@/components/posts/table-of-contents";
 import { Badge } from "@/components/ui/badge";
 import { type Post } from "@/lib/api";
@@ -48,6 +49,10 @@ export function ArticleViewClient({
 
   return (
     <>
+      <ArticleVisitTracker
+        articleUid={post.articleUid}
+        articlePath={articlePath}
+      />
       <ReadingProgress articleRef={articleRef} />
       <div ref={articleRef} className="relative">
         <article className="prose lg:prose-lg xl:prose-xl 2xl:prose-2xl prose-headings:text-foreground/90 prose-p:text-foreground/80 relative mx-auto">

@@ -1,13 +1,15 @@
 "use client";
 import { FeaturedPostCard } from "@/components/home/featured-post-card";
 import { Pagination } from "@/components/ui/pagination";
-import { type Category, type Post } from "@/lib/api";
+import { type Category, type PostSummary } from "@/lib/api";
 
 interface PostsGridProps {
-  posts: Post[];
+  posts: PostSummary[];
   currentPage: number;
   totalPages: number;
   categories?: Category[];
+  getPageHref: (page: number) => string;
+  onPageChange: (page: number) => void;
 }
 
 export function PostsGrid({
@@ -15,6 +17,8 @@ export function PostsGrid({
   currentPage,
   totalPages,
   categories = [],
+  getPageHref,
+  onPageChange,
 }: PostsGridProps) {
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   return (
@@ -38,7 +42,12 @@ export function PostsGrid({
       </div>
 
       {totalPages > 1 && (
-        <Pagination currentPage={currentPage} totalPages={totalPages} />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          getPageHref={getPageHref}
+          onPageChange={onPageChange}
+        />
       )}
     </div>
   );

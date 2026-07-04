@@ -1,46 +1,40 @@
 import { Container, Section } from "@/components/craft";
-import { PostsGrid } from "@/components/posts/posts-grid";
-import { getAllCategories, getAllPosts } from "@/lib/api";
+import { PaginatedPostsGrid } from "@/components/posts/paginated-posts-grid";
+import { getPostListingData } from "@/lib/api";
 import { notFound } from "next/navigation";
 
 type CategoryParams = {
   slug: string; // category name
 };
 
-type CategoryPageSearchParams = {
-  page?: string;
-};
+export const dynamicParams = true;
 
-const POSTS_PER_PAGE = 12;
+export async function generateStaticParams(): Promise<CategoryParams[]> {
+  return getPostListingData().match(
+    ({ categories }) => categories.map(({ path }) => ({ slug: path })),
+    () => [],
+  );
+}
 
 export default async function CategoryPage({
   params,
-  searchParams,
 }: {
   params: Promise<CategoryParams>;
-  searchParams?: Promise<CategoryPageSearchParams>;
 }) {
   const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
   const slug = resolvedParams.slug;
-  const page = parseInt(resolvedSearchParams?.page || "1", 10);
 
-  const categories = await getAllCategories().match(
-    (items) => items,
-    () => [],
+  const { posts: allPosts, categories } = await getPostListingData({
+    fresh: true,
+  }).match(
+    (data) => data,
+    () => ({ posts: [], categories: [] }),
   );
   const category = categories.find((item) => item.path === slug);
   if (!category) notFound();
 
-  const posts = await getAllPosts({ category: category.id }).match(
-    (items) => items,
-    () => [],
-  );
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
-  const currentPage = Math.min(Math.max(1, page), totalPages || 1);
-  const paginatedPosts = posts.slice(
-    (currentPage - 1) * POSTS_PER_PAGE,
-    currentPage * POSTS_PER_PAGE,
+  const posts = allPosts.filter((post) =>
+    post.categories?.includes(category.id),
   );
 
   return (
@@ -55,10 +49,9 @@ export default async function CategoryPage({
           </p>
         </div>
 
-        <PostsGrid
-          posts={paginatedPosts}
-          currentPage={currentPage}
-          totalPages={totalPages}
+        <PaginatedPostsGrid
+          basePath={`/category/${slug}`}
+          posts={posts}
           categories={categories}
         />
       </Container>

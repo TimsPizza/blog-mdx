@@ -3,29 +3,46 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import type { MouseEvent } from "react";
 
 interface PaginationProps {
   totalPages: number;
   currentPage: number;
+  getPageHref: (page: number) => string;
+  onPageChange: (page: number) => void;
 }
 
-export function Pagination({ totalPages, currentPage }: PaginationProps) {
-  const searchParams = useSearchParams();
-
-  const createPageUrl = (page: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", page.toString());
-    return `?${params.toString()}`;
+export function Pagination({
+  totalPages,
+  currentPage,
+  getPageHref,
+  onPageChange,
+}: PaginationProps) {
+  const handlePageClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    page: number,
+  ) => {
+    event.preventDefault();
+    onPageChange(page);
   };
 
   return (
     <div className="flex items-center justify-center gap-2">
-      <Button variant="outline" size="icon" asChild disabled={currentPage <= 1}>
-        <Link href={createPageUrl(currentPage - 1)} scroll={false}>
+      {currentPage <= 1 ? (
+        <Button variant="outline" size="icon" disabled>
           <ChevronLeft className="h-4 w-4" />
-        </Link>
-      </Button>
+        </Button>
+      ) : (
+        <Button variant="outline" size="icon" asChild>
+          <Link
+            href={getPageHref(currentPage - 1)}
+            scroll={false}
+            onClick={(event) => handlePageClick(event, currentPage - 1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+      )}
 
       <div className="flex items-center gap-1">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
@@ -50,7 +67,11 @@ export function Pagination({ totalPages, currentPage }: PaginationProps) {
               size="icon"
               asChild
             >
-              <Link href={createPageUrl(page)} scroll={false}>
+              <Link
+                href={getPageHref(page)}
+                scroll={false}
+                onClick={(event) => handlePageClick(event, page)}
+              >
                 {page}
               </Link>
             </Button>
@@ -58,16 +79,21 @@ export function Pagination({ totalPages, currentPage }: PaginationProps) {
         })}
       </div>
 
-      <Button
-        variant="outline"
-        size="icon"
-        asChild
-        disabled={currentPage >= totalPages}
-      >
-        <Link href={createPageUrl(currentPage + 1)} scroll={false}>
+      {currentPage >= totalPages ? (
+        <Button variant="outline" size="icon" disabled>
           <ChevronRight className="h-4 w-4" />
-        </Link>
-      </Button>
+        </Button>
+      ) : (
+        <Button variant="outline" size="icon" asChild>
+          <Link
+            href={getPageHref(currentPage + 1)}
+            scroll={false}
+            onClick={(event) => handlePageClick(event, currentPage + 1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }
